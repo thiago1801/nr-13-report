@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>ALC Compressores — Login</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(150deg, #212F62 0%, #111827 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      padding: 20px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 40px 32px 32px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.35);
+    }
+
+    /* ── Logo ── */
+    .logo-area {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .logo-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 72px; height: 72px;
+      background: #212F62;
+      border-radius: 18px;
+      margin-bottom: 14px;
+    }
+    .logo-badge svg { width: 44px; height: 44px; }
+    .logo-area h1 {
+      font-size: 20px;
+      font-weight: 800;
+      color: #212F62;
+      letter-spacing: -0.3px;
+    }
+    .logo-area p {
+      font-size: 13px;
+      color: #64748b;
+      margin-top: 4px;
+    }
+
+    /* ── Error box ── */
+    .error-box {
+      background: #fef2f2;
+      border: 1.5px solid #fecaca;
+      color: #dc2626;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 13px;
+      margin-bottom: 18px;
+      display: none;
+    }
+
+    /* ── Fields ── */
+    .field { margin-bottom: 16px; }
+    .field label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 6px;
+    }
+    .field input {
+      width: 100%;
+      padding: 13px 14px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 15px;
+      color: #111;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      background: #fafafa;
+    }
+    .field input:focus {
+      border-color: #212F62;
+      box-shadow: 0 0 0 3px rgba(33,47,98,0.1);
+      background: #fff;
+    }
+
+    /* ── Password wrapper ── */
+    .pw-wrap { position: relative; }
+    .pw-wrap input { padding-right: 46px; }
+    .pw-toggle {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #94a3b8;
+      font-size: 20px;
+      line-height: 1;
+      padding: 2px;
+      display: flex; align-items: center;
+    }
+    .pw-toggle:hover { color: #475569; }
+
+    /* ── Button ── */
+    .btn-login {
+      width: 100%;
+      padding: 14px;
+      background: #C81F25;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 6px;
+      transition: background 0.15s, transform 0.1s;
+      letter-spacing: 0.2px;
+    }
+    .btn-login:hover:not(:disabled) { background: #a81820; }
+    .btn-login:active:not(:disabled) { transform: scale(0.98); }
+    .btn-login:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+    }
+
+    /* ── Spinner inside button ── */
+    .btn-login.loading::after {
+      content: '';
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Footer ── */
+    .footer {
+      text-align: center;
+      margin-top: 28px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+    .footer a { color: #212F62; text-decoration: none; font-weight: 600; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <!-- Logo -->
+  <div class="logo-area">
+    <div class="logo-badge">
+      <svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="22" cy="22" r="18" stroke="#C81F25" stroke-width="3"/>
+        <path d="M14 22 L20 28 L30 16" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <h1>ALC Compressores</h1>
+    <p>Sistema de Inspeção e Laudos</p>
+  </div>
+
+  <!-- Error -->
+  <div class="error-box" id="err"></div>
+
+  <!-- Form -->
+  <div class="field">
+    <label for="username">Usuário</label>
+    <input type="text" id="username" placeholder="Digite seu usuário"
+           autocomplete="username" autocapitalize="none" spellcheck="false">
+  </div>
+
+  <div class="field">
+    <label for="password">Senha</label>
+    <div class="pw-wrap">
+      <input type="password" id="password" placeholder="Digite sua senha"
+             autocomplete="current-password">
+      <button class="pw-toggle" onclick="togglePw()" type="button" title="Mostrar/ocultar senha">
+        <svg id="eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <button class="btn-login" id="btn-login" onclick="doLogin()">Entrar</button>
+
+  <div class="footer">
+    ALC Compressores &copy; 2026 &nbsp;·&nbsp;
+    <a href="setup.html">Primeiro acesso?</a>
+  </div>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+
+<script>
+  // ── Verifica sessão já existente ──
+  (function(){
+    try {
+      const s = JSON.parse(localStorage.getItem('alc_session') || 'null');
+      if (s && s.uid && (Date.now() - s.loginTime) < 8 * 60 * 60 * 1000) {
+        window.location.replace('menu.html');
+      }
+    } catch(e) { localStorage.removeItem('alc_session'); }
+  })();
+
+  function togglePw() {
+    const inp = document.getElementById('password');
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('err');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  async function doLogin() {
+    const username = document.getElementById('username').value.trim().toLowerCase();
+    const password = document.getElementById('password').value;
+    const btn = document.getElementById('btn-login');
+
+    document.getElementById('err').style.display = 'none';
+
+    if (!username || !password) {
+      showError('Preencha usuário e senha.');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.classList.add('loading');
+    btn.textContent = 'Entrando';
+
+    try {
+      // Converte username para e-mail (convenção interna)
+      const email = username + '@alc.internal';
+      const cred = await firebase.auth().signInWithEmailAndPassword(email, password);
+
+      // Carrega perfil do Firestore
+      const doc = await firebase.firestore().collection('users').doc(cred.user.uid).get();
+      if (!doc.exists) throw new Error('Perfil de usuário não encontrado. Contate o administrador.');
+
+      const profile = doc.data();
+      if (profile.active === false) throw new Error('Usuário desativado. Contate o administrador.');
+
+      // Salva sessão local (8h)
+      localStorage.setItem('alc_session', JSON.stringify({
+        uid:       cred.user.uid,
+        username:  profile.username,
+        name:      profile.name,
+        role:      profile.role,
+        loginTime: Date.now()
+      }));
+
+      window.location.replace('menu.html');
+
+    } catch(e) {
+      let msg = 'Usuário ou senha incorretos.';
+      if (e.code === 'auth/too-many-requests')
+        msg = 'Muitas tentativas incorretas. Tente novamente em alguns minutos.';
+      else if (e.code === 'auth/network-request-failed')
+        msg = 'Sem conexão com a internet. Verifique sua rede.';
+      else if (e.message && !e.code)
+        msg = e.message;
+      showError(msg);
+
+      btn.disabled = false;
+      btn.classList.remove('loading');
+      btn.textContent = 'Entrar';
+    }
+  }
+
+  // Enter para logar
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ALC — Configuração Inicial</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      background: linear-gradient(150deg, #212F62, #111827);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      padding: 20px;
+    }
+    .card {
+      background: #fff; border-radius: 20px;
+      padding: 40px 32px; width: 100%; max-width: 440px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.35);
+    }
+    .icon { text-align: center; font-size: 48px; margin-bottom: 12px; }
+    h1 { font-size: 20px; font-weight: 800; color: #212F62; text-align: center; }
+    .sub { font-size: 13px; color: #64748b; text-align: center; margin: 6px 0 28px; line-height: 1.5; }
+
+    .step {
+      background: #f8fafc; border-radius: 10px;
+      border: 1.5px solid #e2e8f0; padding: 16px;
+      margin-bottom: 14px; display: none;
+    }
+    .step.active { display: block; }
+    .step h3 { font-size: 14px; font-weight: 700; color: #1e293b; margin-bottom: 10px; }
+
+    .info-box {
+      background: #eff6ff; border: 1px solid #bfdbfe;
+      border-radius: 8px; padding: 12px;
+      font-size: 13px; color: #1d4ed8; line-height: 1.6;
+      margin-bottom: 14px;
+    }
+    .warn-box {
+      background: #fefce8; border: 1px solid #fde68a;
+      border-radius: 8px; padding: 12px;
+      font-size: 13px; color: #92400e; line-height: 1.6;
+    }
+
+    .progress {
+      text-align: center; font-size: 13px; color: #94a3b8;
+      margin-bottom: 20px;
+    }
+    .progress-bar {
+      height: 4px; background: #e2e8f0; border-radius: 4px;
+      margin: 8px 0 0;
+    }
+    .progress-fill {
+      height: 100%; background: #212F62; border-radius: 4px;
+      transition: width 0.4s;
+    }
+
+    .btn {
+      width: 100%; padding: 13px;
+      border: none; border-radius: 10px;
+      font-size: 15px; font-weight: 700; cursor: pointer;
+      font-family: inherit; margin-top: 6px;
+      transition: background 0.15s;
+    }
+    .btn-primary { background: #212F62; color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: #1a2550; }
+    .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; }
+    .btn-success { background: #16a34a; color: #fff; }
+
+    .log {
+      background: #0f172a; color: #4ade80;
+      border-radius: 8px; padding: 14px;
+      font-family: monospace; font-size: 12px;
+      line-height: 1.7; min-height: 80px;
+      max-height: 160px; overflow-y: auto;
+      margin: 12px 0;
+    }
+    .log .err { color: #f87171; }
+    .log .warn { color: #fbbf24; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="icon">⚙️</div>
+  <h1>Configuração Inicial</h1>
+  <p class="sub">Este assistente cria o usuário administrador e configura o sistema pela primeira vez.</p>
+
+  <div class="progress">
+    <span id="step-label">Passo 1 de 3</span>
+    <div class="progress-bar"><div class="progress-fill" id="prog" style="width:33%"></div></div>
+  </div>
+
+  <!-- Step 1: Verificação -->
+  <div class="step active" id="step1">
+    <h3>🔍 Verificando o Firebase</h3>
+    <div class="info-box">
+      Antes de continuar, certifique-se de que você já:<br>
+      ✅ Criou um projeto no Firebase<br>
+      ✅ Editou o arquivo <strong>firebase-config.js</strong> com seus dados<br>
+      ✅ Ativou <strong>Authentication → Email/Senha</strong><br>
+      ✅ Criou o banco <strong>Firestore Database</strong>
+    </div>
+    <div class="warn-box">
+      ⚠ Se ainda não configurou o Firebase, leia o arquivo <strong>INSTRUCOES.md</strong> primeiro!
+    </div>
+    <div class="log" id="log1"></div>
+    <button class="btn btn-primary" id="btn1" onclick="checkFirebase()">Verificar conexão Firebase</button>
+  </div>
+
+  <!-- Step 2: Criar admin -->
+  <div class="step" id="step2">
+    <h3>👤 Criando usuário Administrador</h3>
+    <div class="info-box">
+      Será criado o usuário padrão:<br>
+      <strong>Usuário:</strong> admin<br>
+      <strong>Senha:</strong> admin123<br>
+      <strong>Perfil:</strong> Administrador<br><br>
+      ⚠ Altere a senha após o primeiro acesso!
+    </div>
+    <div class="log" id="log2"></div>
+    <button class="btn btn-primary" id="btn2" onclick="createAdmin()">Criar usuário admin</button>
+  </div>
+
+  <!-- Step 3: Concluído -->
+  <div class="step" id="step3">
+    <h3>✅ Sistema configurado!</h3>
+    <div class="info-box" style="background:#f0fdf4;border-color:#86efac;color:#166534">
+      O sistema foi configurado com sucesso.<br><br>
+      <strong>Próximos passos:</strong><br>
+      1. Acesse o login com <strong>admin / admin123</strong><br>
+      2. Vá em <strong>Gerenciar Usuários</strong> e altere a senha<br>
+      3. Adicione os demais usuários da equipe<br>
+      4. Publique o app usando o Firebase Hosting (veja INSTRUCOES.md)
+    </div>
+    <a href="login.html" class="btn btn-success" style="display:block;text-align:center;text-decoration:none;margin-top:6px">
+      Ir para o Login →
+    </a>
+  </div>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+
+<script>
+  const STEPS = 3;
+  let currentStep = 1;
+
+  function goStep(n) {
+    document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+    document.getElementById('step' + n).classList.add('active');
+    document.getElementById('step-label').textContent = `Passo ${n} de ${STEPS}`;
+    document.getElementById('prog').style.width = (n / STEPS * 100) + '%';
+    currentStep = n;
+  }
+
+  function log(stepN, msg, type='') {
+    const el = document.getElementById('log' + stepN);
+    const line = document.createElement('div');
+    if (type) line.className = type;
+    line.textContent = msg;
+    el.appendChild(line);
+    el.scrollTop = el.scrollHeight;
+  }
+
+  // ── Step 1: Verify Firebase ──
+  async function checkFirebase() {
+    const btn = document.getElementById('btn1');
+    btn.disabled = true; btn.textContent = 'Verificando...';
+    log(1, '🔌 Tentando conectar ao Firebase...');
+
+    try {
+      // Test Firestore connectivity
+      await firebase.firestore().collection('_test').limit(1).get();
+      log(1, '✅ Firestore: conectado!');
+    } catch(e) {
+      if (e.code === 'permission-denied') {
+        log(1, '✅ Firestore: conectado! (permissões OK — nenhuma leitura pública ainda)');
+      } else {
+        log(1, '❌ Erro ao conectar: ' + e.message, 'err');
+        log(1, '⚠ Verifique se editou firebase-config.js com seus dados reais.', 'warn');
+        btn.disabled = false; btn.textContent = 'Tentar novamente';
+        return;
+      }
+    }
+
+    log(1, '✅ Firebase autenticado e pronto!');
+    setTimeout(() => goStep(2), 800);
+  }
+
+  // ── Step 2: Create Admin ──
+  async function createAdmin() {
+    const btn = document.getElementById('btn2');
+    btn.disabled = true; btn.textContent = 'Criando...';
+    log(2, '👤 Criando usuário admin...');
+
+    const email    = 'admin@alc.internal';
+    const password = 'admin123';
+
+    try {
+      // Verifica se já existe
+      let uid = null;
+      try {
+        const cred = await firebase.auth().createUserWithEmailAndPassword(email, password);
+        uid = cred.user.uid;
+        log(2, '✅ Usuário criado no Firebase Auth.');
+      } catch(e) {
+        if (e.code === 'auth/email-already-in-use') {
+          log(2, '⚠ Usuário admin já existe no Auth — verificando Firestore...', 'warn');
+          // Tenta logar para obter o UID
+          const cred = await firebase.auth().signInWithEmailAndPassword(email, password);
+          uid = cred.user.uid;
+          log(2, '✅ Login confirmado. UID: ' + uid.substring(0,8) + '...');
+        } else {
+          throw e;
+        }
+      }
+
+      // Salva / atualiza perfil no Firestore
+      await firebase.firestore().collection('users').doc(uid).set({
+        username: 'admin',
+        name:     'Administrador',
+        role:     'admin',
+        active:   true,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+
+      log(2, '✅ Perfil admin salvo no Firestore.');
+      log(2, '🎉 Configuração concluída com sucesso!');
+      await firebase.auth().signOut();
+      setTimeout(() => goStep(3), 1000);
+
+    } catch(e) {
+      log(2, '❌ Erro: ' + (e.message || e.code), 'err');
+      if (e.code === 'auth/weak-password')
+        log(2, '⚠ Senha muito fraca. Edite o código e tente novamente.', 'warn');
+      btn.disabled = false; btn.textContent = 'Tentar novamente';
+    }
+  }
+</script>
+</body>
+</html>

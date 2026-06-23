@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>ALC — Gestão de Usuários</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: #f1f5f9;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      color: #1e293b;
+    }
+
+    /* ── Top Bar ── */
+    .topbar {
+      background: #212F62;
+      color: #fff;
+      padding: 0 20px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .topbar-left { display: flex; align-items: center; gap: 10px; }
+    .back-btn {
+      background: rgba(255,255,255,0.12);
+      border: none; color: #fff;
+      padding: 6px 12px; border-radius: 7px;
+      font-size: 13px; cursor: pointer;
+      text-decoration: none; display: inline-block;
+      font-family: inherit;
+    }
+    .back-btn:hover { background: rgba(255,255,255,0.2); }
+    .topbar h1 { font-size: 16px; font-weight: 700; }
+
+    /* ── Main ── */
+    .main { max-width: 780px; margin: 0 auto; padding: 32px 20px; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 24px; left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #1e293b; color: #fff;
+      padding: 10px 20px; border-radius: 10px;
+      font-size: 13px; font-weight: 600;
+      transition: transform 0.3s;
+      z-index: 999;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.success { background: #16a34a; }
+    .toast.error   { background: #dc2626; }
+
+    /* ── Section heading ── */
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .section-head h2 { font-size: 17px; font-weight: 700; color: #212F62; }
+
+    /* ── Add User Button ── */
+    .btn-add {
+      background: #C81F25; color: #fff;
+      border: none; border-radius: 8px;
+      padding: 9px 18px; font-size: 13px;
+      font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .btn-add:hover { background: #a81820; }
+
+    /* ── User Cards ── */
+    .user-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .user-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      border: 1.5px solid #e2e8f0;
+    }
+    .user-card.inactive { opacity: 0.55; }
+
+    .user-avatar {
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      background: #212F62;
+      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .user-info { flex: 1; min-width: 0; }
+    .user-name { font-size: 14px; font-weight: 700; color: #1e293b; }
+    .user-meta { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+
+    .role-pill {
+      font-size: 11px; font-weight: 700;
+      padding: 3px 10px; border-radius: 10px;
+      text-transform: uppercase; letter-spacing: 0.4px;
+      flex-shrink: 0;
+    }
+    .role-pill.admin  { background: #212F62; color: #fff; }
+    .role-pill.master { background: #0ea5e9; color: #fff; }
+    .role-pill.campo  { background: #e2e8f0; color: #475569; }
+
+    .user-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .btn-sm {
+      border: 1.5px solid #e2e8f0;
+      background: #fff; color: #374151;
+      border-radius: 7px; padding: 5px 10px;
+      font-size: 12px; font-weight: 600;
+      cursor: pointer; transition: all 0.12s;
+      font-family: inherit;
+    }
+    .btn-sm:hover { border-color: #212F62; color: #212F62; }
+    .btn-sm.danger:hover { border-color: #dc2626; color: #dc2626; }
+
+    /* ── Modal ── */
+    .overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 200;
+      display: none; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .overlay.open { display: flex; }
+
+    .modal {
+      background: #fff;
+      border-radius: 16px;
+      padding: 28px 24px;
+      width: 100%; max-width: 420px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.25);
+    }
+    .modal h3 { font-size: 17px; font-weight: 800; color: #212F62; margin-bottom: 20px; }
+
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 5px; }
+    .field input, .field select {
+      width: 100%; padding: 11px 12px;
+      border: 1.5px solid #e2e8f0; border-radius: 8px;
+      font-size: 14px; outline: none; font-family: inherit;
+      transition: border-color 0.15s;
+    }
+    .field input:focus, .field select:focus { border-color: #212F62; }
+
+    .modal-err {
+      background: #fef2f2; border: 1px solid #fecaca;
+      color: #dc2626; border-radius: 8px;
+      padding: 9px 12px; font-size: 13px;
+      margin-bottom: 14px; display: none;
+    }
+
+    .modal-actions { display: flex; gap: 10px; margin-top: 6px; }
+    .btn-save {
+      flex: 1; background: #212F62; color: #fff;
+      border: none; border-radius: 8px;
+      padding: 12px; font-size: 14px; font-weight: 700;
+      cursor: pointer; font-family: inherit;
+    }
+    .btn-save:hover { background: #1a2550; }
+    .btn-cancel {
+      flex: 1; background: #f1f5f9; color: #374151;
+      border: none; border-radius: 8px;
+      padding: 12px; font-size: 14px; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+    }
+    .btn-cancel:hover { background: #e2e8f0; }
+
+    .empty-state {
+      text-align: center; padding: 40px 20px; color: #94a3b8;
+      font-size: 14px;
+    }
+
+    @media (max-width: 500px) {
+      .user-actions .btn-sm span { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Top Bar -->
+<div class="topbar">
+  <div class="topbar-left">
+    <a class="back-btn" href="menu.html">← Menu</a>
+    <h1>Gestão de Usuários</h1>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Main -->
+<div class="main">
+  <div class="section-head">
+    <h2>Usuários cadastrados</h2>
+    <button class="btn-add" onclick="openModal()">+ Novo usuário</button>
+  </div>
+
+  <div class="user-list" id="user-list">
+    <div class="empty-state" id="empty-state">Carregando usuários...</div>
+  </div>
+</div>
+
+<!-- Modal: Adicionar / Editar usuário -->
+<div class="overlay" id="overlay" onclick="e => { if(e.target===this) closeModal(); }">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3 id="modal-title">Novo Usuário</h3>
+    <div class="modal-err" id="modal-err"></div>
+
+    <div class="field">
+      <label>Nome completo</label>
+      <input type="text" id="f-name" placeholder="Ex: João da Silva">
+    </div>
+    <div class="field">
+      <label>Usuário (login)</label>
+      <input type="text" id="f-username" placeholder="Ex: joao.silva" autocapitalize="none">
+    </div>
+    <div class="field">
+      <label>Senha</label>
+      <input type="password" id="f-password" placeholder="Mínimo 6 caracteres">
+    </div>
+    <div class="field">
+      <label>Perfil</label>
+      <select id="f-role">
+        <option value="campo">Campo — somente preenchimento</option>
+        <option value="master">Master — acesso completo</option>
+        <option value="admin">Admin — gerencia usuários</option>
+      </select>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-save" id="btn-save" onclick="saveUser()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+
+<script>
+  // ── Auth check (admin only) ──
+  const session = (function(){
+    try {
+      const s = JSON.parse(localStorage.getItem('alc_session') || 'null');
+      if (s && s.uid && (Date.now() - s.loginTime) < 8 * 60 * 60 * 1000) return s;
+    } catch(e) {}
+    return null;
+  })();
+
+  if (!session) {
+    window.location.replace('login.html');
+  } else if (session.role !== 'admin') {
+    alert('Acesso restrito ao administrador.');
+    window.location.replace('menu.html');
+  }
+
+  const db   = firebase.firestore();
+  const auth = firebase.auth();
+
+  let editingUid = null;
+  let allUsers   = [];
+
+  // ── Toast ──
+  function showToast(msg, type='') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show ' + type;
+    setTimeout(() => { t.className = 'toast'; }, 3000);
+  }
+
+  // ── Load Users ──
+  async function loadUsers() {
+    try {
+      const snap = await db.collection('users').orderBy('username').get();
+      allUsers = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+      renderUsers();
+    } catch(e) {
+      document.getElementById('empty-state').textContent = 'Erro ao carregar usuários.';
+    }
+  }
+
+  function renderUsers() {
+    const list = document.getElementById('user-list');
+    const empty = document.getElementById('empty-state');
+    if (allUsers.length === 0) {
+      list.innerHTML = '';
+      empty.style.display = 'block';
+      empty.textContent = 'Nenhum usuário cadastrado.';
+      return;
+    }
+    empty.style.display = 'none';
+    list.innerHTML = allUsers.map(u => {
+      const initials = (u.name||u.username||'?').split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+      const inactive = u.active === false;
+      return `
+      <div class="user-card ${inactive?'inactive':''}">
+        <div class="user-avatar">${initials}</div>
+        <div class="user-info">
+          <div class="user-name">${u.name||'—'} ${inactive?'<em style="font-weight:400;font-size:11px;color:#94a3b8">(desativado)</em>':''}</div>
+          <div class="user-meta">@${u.username}</div>
+        </div>
+        <span class="role-pill ${u.role||'campo'}">${u.role||'campo'}</span>
+        <div class="user-actions">
+          <button class="btn-sm" onclick='editUser(${JSON.stringify(u)})'>✏ <span>Editar</span></button>
+          <button class="btn-sm danger" onclick="toggleActive('${u.uid}', ${!inactive})">
+            ${inactive ? '✓ <span>Ativar</span>' : '✗ <span>Desativar</span>'}
+          </button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── Open/Close Modal ──
+  function openModal(user=null) {
+    editingUid = user ? user.uid : null;
+    document.getElementById('modal-title').textContent = user ? 'Editar Usuário' : 'Novo Usuário';
+    document.getElementById('f-name').value     = user ? (user.name||'') : '';
+    document.getElementById('f-username').value = user ? (user.username||'') : '';
+    document.getElementById('f-password').value = '';
+    document.getElementById('f-password').placeholder = user ? 'Deixe em branco para não alterar' : 'Mínimo 6 caracteres';
+    document.getElementById('f-role').value     = user ? (user.role||'campo') : 'campo';
+    document.getElementById('modal-err').style.display = 'none';
+    document.getElementById('overlay').classList.add('open');
+    setTimeout(()=>document.getElementById('f-name').focus(), 100);
+  }
+
+  function editUser(u) { openModal(u); }
+  function closeModal() { document.getElementById('overlay').classList.remove('open'); }
+
+  // ── Save User ──
+  async function saveUser() {
+    const name     = document.getElementById('f-name').value.trim();
+    const username = document.getElementById('f-username').value.trim().toLowerCase();
+    const password = document.getElementById('f-password').value;
+    const role     = document.getElementById('f-role').value;
+    const errEl    = document.getElementById('modal-err');
+    const btn      = document.getElementById('btn-save');
+
+    errEl.style.display = 'none';
+
+    if (!name || !username) { showModalErr('Preencha nome e usuário.'); return; }
+    if (!editingUid && password.length < 6) { showModalErr('Senha deve ter pelo menos 6 caracteres.'); return; }
+    if (editingUid && password && password.length < 6) { showModalErr('Nova senha deve ter pelo menos 6 caracteres.'); return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
+
+    try {
+      const email = username + '@alc.internal';
+
+      if (editingUid) {
+        // Editar usuário existente
+        const profileUpdate = { name, username, role };
+        await db.collection('users').doc(editingUid).update(profileUpdate);
+
+        if (password) {
+          // Atualiza senha via Firebase (requer re-auth ou admin SDK — simplificado aqui)
+          // Nota: atualizar senha de outro usuário requer Firebase Admin SDK (backend)
+          // Por ora, registrar flag para reset no próximo login
+          await db.collection('users').doc(editingUid).update({ pendingPasswordReset: password });
+        }
+
+        showToast('Usuário atualizado com sucesso!', 'success');
+      } else {
+        // Criar novo usuário
+        // Cria no Firebase Auth
+        const cred = await auth.createUserWithEmailAndPassword(email, password);
+        // Salva perfil no Firestore
+        await db.collection('users').doc(cred.user.uid).set({
+          username, name, role, active: true,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          createdBy: session.uid
+        });
+        showToast('Usuário criado com sucesso!', 'success');
+      }
+
+      closeModal();
+      loadUsers();
+    } catch(e) {
+      let msg = 'Erro ao salvar. Tente novamente.';
+      if (e.code === 'auth/email-already-in-use') msg = 'Esse nome de usuário já está em uso.';
+      if (e.code === 'auth/weak-password') msg = 'Senha muito fraca. Use pelo menos 6 caracteres.';
+      if (e.message && !e.code) msg = e.message;
+      showModalErr(msg);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Salvar';
+    }
+  }
+
+  function showModalErr(msg) {
+    const el = document.getElementById('modal-err');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  // ── Ativar / Desativar ──
+  async function toggleActive(uid, makeActive) {
+    if (!confirm(makeActive ? 'Ativar este usuário?' : 'Desativar este usuário?')) return;
+    try {
+      await db.collection('users').doc(uid).update({ active: makeActive });
+      showToast(makeActive ? 'Usuário ativado.' : 'Usuário desativado.', 'success');
+      loadUsers();
+    } catch(e) {
+      showToast('Erro ao alterar usuário.', 'error');
+    }
+  }
+
+  // Fecha modal clicando fora
+  document.getElementById('overlay').addEventListener('click', function(e){
+    if (e.target === this) closeModal();
+  });
+
+  // Enter no modal
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && document.getElementById('overlay').classList.contains('open')) saveUser();
+    if (e.key === 'Escape') closeModal();
+  });
+
+  // Carrega ao iniciar
+  loadUsers();
+</script>
+</body>
+</html>

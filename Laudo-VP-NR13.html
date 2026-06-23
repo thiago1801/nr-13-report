@@ -1,0 +1,2724 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>Laudo VP · NR-13 | ALC Compressores</title>
+<!-- ── Verificação de sessão ALC (deve ser o primeiro script) ── -->
+<script>
+(function(){
+  try {
+    var s = JSON.parse(localStorage.getItem('alc_session') || 'null');
+    if (!s || !s.uid || (Date.now() - s.loginTime) >= 8*60*60*1000) {
+      localStorage.removeItem('alc_session');
+      window.location.replace('login.html');
+    }
+  } catch(e) {
+    window.location.replace('login.html');
+  }
+})();
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root{
+  --bg:#0f1117;--card:#1a1d27;--border:#2a2d3e;--accent:#3b82f6;--accentD:#2563eb;
+  --success:#22c55e;--warn:#f59e0b;--danger:#ef4444;
+  --text:#e2e8f0;--muted:#64748b;--label:#94a3b8;
+  --alc-blue:#1e3a8a;--alc-red:#dc2626;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;}
+input,button,select,textarea{font-family:inherit;}
+
+/* AUTH */
+#auth{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:16px;}
+.auth-wrap{width:100%;max-width:380px;}
+.auth-logo{text-align:center;margin-bottom:22px;}
+.auth-logo h1{font-size:20px;font-weight:800;color:var(--text);}
+.auth-logo p{font-size:12px;color:var(--muted);margin-top:4px;}
+.auth-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;}
+.tab-row{display:flex;background:#12151f;border-radius:8px;padding:3px;margin-bottom:18px;}
+.tab-row button{flex:1;padding:8px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:700;transition:all .2s;}
+.tab-row button.active{background:var(--accent);color:#fff;}
+.tab-row button:not(.active){background:transparent;color:var(--muted);}
+
+/* PENDING */
+#pending{display:none;align-items:center;justify-content:center;min-height:100vh;}
+.pending-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:36px;max-width:340px;text-align:center;}
+
+/* APP */
+#app{display:none;flex-direction:column;min-height:100vh;}
+.app-header{background:var(--card);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
+.app-header h2{font-size:14px;font-weight:800;}
+.hdr-meta{font-size:11px;color:var(--muted);margin-top:1px;}
+.hdr-actions{display:flex;gap:7px;align-items:center;}
+.btn-sm{padding:5px 11px;border:none;border-radius:7px;cursor:pointer;font-size:11px;font-weight:700;}
+.tab-nav{display:flex;overflow-x:auto;background:var(--card);border-bottom:1px solid var(--border);padding:0 10px;flex-shrink:0;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.tab-nav::-webkit-scrollbar{display:none;}
+.tab-nav button{padding:10px 13px;border:none;background:none;cursor:pointer;font-size:11px;font-weight:700;white-space:nowrap;color:var(--muted);border-bottom:2px solid transparent;transition:all .2s;}
+.tab-nav button.active{color:var(--accent);border-bottom-color:var(--accent);}
+.content{flex:1;overflow-y:auto;padding:16px;max-width:760px;width:100%;margin:0 auto;}
+
+/* FIELDS */
+.sec-title{font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px;}
+.sec-sub{font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6;}
+.row2{display:flex;flex-wrap:wrap;gap:10px;}
+.half{width:calc(50% - 5px);}
+.third{width:calc(33.3% - 7px);}
+.full{width:100%;}
+@media(max-width:520px){.half,.third{width:100%;}}
+.field-mb{margin-bottom:10px;}
+.field-lbl{display:block;font-size:10px;font-weight:700;color:var(--label);margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em;}
+.field-inp{width:100%;padding:8px 11px;background:#12151f;border:1.5px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);outline:none;transition:border .15s;}
+.field-inp:focus{border-color:var(--accent);}
+.field-sel{width:100%;padding:8px 11px;background:#12151f;border:1.5px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);outline:none;appearance:none;}
+.field-sel:focus{border-color:var(--accent);}
+.msg-ok{background:#052e16;border:1px solid #16a34a;border-radius:8px;padding:10px 14px;font-size:12px;color:var(--success);margin-bottom:12px;}
+.msg-err{background:#2d0a0a;border:1px solid #dc2626;border-radius:8px;padding:10px 14px;font-size:12px;color:#fca5a5;margin-bottom:12px;}
+
+/* CHECKBOXES */
+.cb-group{background:#12151f;border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:12px;}
+.cb-group-title{font-size:11px;font-weight:700;color:var(--label);text-transform:uppercase;margin-bottom:9px;}
+.cb-row{display:flex;flex-wrap:wrap;gap:8px;}
+.cb-item{display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--card);border:1.5px solid var(--border);border-radius:7px;cursor:pointer;transition:all .15s;user-select:none;}
+.cb-item.checked{background:#1e3a5f;border-color:var(--accent);}
+.cb-item input{display:none;}
+.cb-dot{width:14px;height:14px;border:2px solid var(--border);border-radius:3px;flex-shrink:0;transition:all .15s;display:flex;align-items:center;justify-content:center;font-size:9px;}
+.cb-item.checked .cb-dot{background:var(--accent);border-color:var(--accent);color:white;}
+.cb-label{font-size:12px;font-weight:600;}
+
+/* ITENS INSPECAO TABLE */
+.insp-table{width:100%;border-collapse:collapse;margin-top:6px;}
+.insp-table th{background:#1e3a5f;color:#93c5fd;font-size:10px;font-weight:700;padding:7px 8px;text-align:left;border:1px solid var(--border);}
+.insp-table td{padding:5px 7px;border:1px solid var(--border);font-size:12px;vertical-align:middle;}
+.insp-table tr:nth-child(even) td{background:#12151f;}
+.status-btn{padding:3px 9px;border:none;border-radius:5px;cursor:pointer;font-size:11px;font-weight:700;transition:all .15s;}
+.status-ap{background:#166534;color:#4ade80;}
+.status-ae{background:#92400e;color:#fcd34d;}
+.status-na{background:#1e293b;color:var(--muted);}
+.status-ap.sel,.status-ae.sel,.status-na.sel{outline:2px solid white;}
+
+/* PHOTO REGION */
+.photo-region{background:#12151f;border:1.5px solid var(--border);border-radius:14px;padding:14px;margin-bottom:16px;}
+.region-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
+.region-title{font-size:13px;font-weight:800;}
+.region-count{font-size:10px;color:var(--muted);margin-top:2px;}
+.avg-badge{text-align:right;background:#0a1628;border:1.5px solid var(--accent);border-radius:9px;padding:5px 11px;}
+.avg-lbl{font-size:9px;color:var(--label);font-weight:700;text-transform:uppercase;}
+.avg-val{font-size:20px;font-weight:800;}
+.avg-sub{font-size:9px;color:var(--muted);}
+.featured-grid{display:flex;gap:7px;margin-bottom:10px;}
+.featured-item{flex:1;border-radius:9px;overflow:hidden;}
+.feat-info{padding:4px 7px;text-align:center;}
+.feat-val{font-size:14px;font-weight:800;}
+.feat-delta{font-size:9px;color:var(--muted);}
+.photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:6px;margin-bottom:9px;}
+.photo-cell{background:var(--card);border:1px solid var(--border);border-radius:7px;overflow:hidden;position:relative;}
+.photo-cell.is-feat{border-color:var(--accent);border-width:1.5px;}
+.feat-star{position:absolute;top:2px;left:2px;background:var(--accent);border-radius:3px;padding:1px 4px;font-size:7px;color:#fff;font-weight:700;z-index:1;}
+.photo-cell img{width:100%;height:56px;object-fit:cover;display:block;}
+.photo-cell .del-btn{position:absolute;top:2px;right:2px;width:16px;height:16px;background:rgba(0,0,0,.75);border:none;color:#fff;border-radius:50%;cursor:pointer;font-size:9px;line-height:16px;text-align:center;padding:0;}
+.photo-cell .edit-btn{position:absolute;top:2px;right:20px;width:16px;height:16px;background:rgba(0,0,0,.75);border:none;color:#fff;border-radius:50%;cursor:pointer;font-size:9px;line-height:16px;text-align:center;padding:0;}
+.photo-cell input[type=text]{width:100%;padding:2px 4px;font-size:10px;background:#12151f;border:none;border-top:1px solid var(--border);color:var(--text);outline:none;}
+.photo-status{font-size:9px;text-align:center;padding:2px 4px;font-weight:700;}
+.photo-status.ok{background:#052e16;color:var(--success);}
+.photo-status.pending{background:#2d0a0a;color:#fca5a5;}
+.ocr-bar{background:#0c1a2e;border:1px solid #1e40af;border-radius:7px;padding:7px 11px;margin-bottom:8px;font-size:11px;color:#93c5fd;}
+.warn-bar{background:#2d1b00;border:1px solid #92400e;border-radius:7px;padding:6px 11px;margin-bottom:8px;font-size:11px;color:var(--warn);}
+/* PHOTO EDIT MODAL (rotate/crop) */
+#photo-edit-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:3000;align-items:center;justify-content:center;padding:16px;}
+#photo-edit-modal.open{display:flex;}
+.pe-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;}
+.pe-canvas-wrap{background:#000;border-radius:8px;overflow:hidden;margin:12px 0;display:flex;align-items:center;justify-content:center;position:relative;touch-action:none;}
+.pe-canvas-wrap canvas{max-width:100%;display:block;}
+.pe-crop-box{position:absolute;border:2px dashed #3b82f6;background:rgba(59,130,246,.15);cursor:move;}
+.pe-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+.pe-btn{flex:1;min-width:80px;padding:9px;border:1.5px solid var(--border);background:#12151f;color:var(--text);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;}
+.pe-btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+.pe-btn.danger{background:#7f1d1d;border-color:#7f1d1d;color:#fca5a5;}
+.add-btns{display:flex;gap:7px;margin-top:5px;}
+.btn-file{flex:1;padding:8px;background:#1e3a5f;color:#60a5fa;border:1.5px dashed #1e40af;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;text-align:center;}
+.btn-cam{flex:1;padding:8px;background:#0f2d1f;color:#4ade80;border:1.5px dashed #166534;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;text-align:center;}
+
+/* SINGLE PHOTO */
+.single-photo{background:#12151f;border:1.5px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px;}
+.sp-title{font-size:12px;font-weight:700;margin-bottom:9px;}
+.sp-preview{position:relative;border-radius:7px;overflow:hidden;margin-bottom:8px;}
+.sp-preview img{width:100%;max-height:180px;object-fit:cover;border-radius:7px;display:block;}
+.sp-del{position:absolute;top:5px;right:5px;background:rgba(0,0,0,.7);border:none;color:#fff;width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:13px;font-weight:700;}
+.sp-edit{position:absolute;top:5px;right:33px;background:rgba(0,0,0,.7);border:none;color:#fff;width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:12px;}
+.sp-empty{background:#0a0d14;border:1.5px dashed var(--border);border-radius:7px;height:80px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;margin-bottom:9px;}
+
+/* SUMMARY TABLE */
+.summary-table{width:100%;border-collapse:collapse;margin-top:8px;}
+.summary-table th,.summary-table td{padding:6px 8px;border:1px solid var(--border);font-size:12px;text-align:center;}
+.summary-table th{background:#1e3a5f;color:#93c5fd;font-size:10px;font-weight:700;}
+
+/* MODAL */
+#modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:1000;align-items:center;justify-content:center;padding:16px;}
+#modal.open{display:flex;}
+.modal-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:480px;max-height:82vh;overflow-y:auto;}
+
+/* QR MODAL */
+#qr-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:2000;align-items:center;justify-content:center;padding:20px;}
+#qr-modal.open{display:flex;}
+.qr-card{background:white;border-radius:16px;padding:28px;max-width:340px;width:100%;text-align:center;}
+.qr-card h3{font-size:16px;font-weight:800;color:#1e3a8a;margin-bottom:4px;}
+.qr-card p{font-size:11px;color:#64748b;margin-bottom:16px;}
+#qr-canvas{margin:0 auto;}
+.qr-card .qr-info{margin-top:14px;font-size:11px;color:#475569;line-height:1.6;}
+.qr-card .qr-close{margin-top:16px;padding:9px 24px;background:#1e3a8a;color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;}
+
+/* GENERATE */
+.gen-summary{background:#0c1a2e;border:1px solid #1e40af;border-radius:12px;padding:14px;margin-bottom:16px;}
+.gen-row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #1e3a5f;font-size:12px;}
+.gen-btns{display:flex;gap:10px;flex-wrap:wrap;}
+.btn-word{flex:1;min-width:120px;padding:13px;background:#1e3a5f;color:#60a5fa;border:1.5px solid #1e40af;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;}
+.btn-pdf{flex:1;min-width:120px;padding:13px;background:#1f0a00;color:#f97316;border:1.5px solid #9a3412;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;}
+.btn-qr{flex:1;min-width:120px;padding:13px;background:#0f2d1f;color:#4ade80;border:1.5px solid #166534;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;}
+.btn-disabled{opacity:.45;cursor:not-allowed!important;}
+.gen-note{font-size:11px;color:var(--muted);text-align:center;margin-top:8px;}
+.spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:5px;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* CALC BOX */
+.calc-box{background:#0c1a2e;border:1px solid #1e40af;border-radius:10px;padding:14px;margin-bottom:14px;}
+.calc-title{font-size:12px;font-weight:700;color:#93c5fd;text-transform:uppercase;margin-bottom:10px;}
+.formula{text-align:center;font-size:14px;color:#60a5fa;margin-bottom:10px;font-style:italic;}
+.calc-result{background:#1e3a5f;border-radius:7px;padding:8px 12px;text-align:center;margin-top:8px;}
+.calc-result-val{font-size:18px;font-weight:800;color:#60a5fa;}
+.calc-result-lbl{font-size:10px;color:var(--muted);}
+</style>
+</head>
+<body>
+<!-- AUTH -->
+<div id="auth">
+<div class="auth-wrap">
+  <div class="auth-logo">
+    <div style="font-size:38px;margin-bottom:6px">⚙️</div>
+    <h1>Laudo VP · NR-13</h1>
+    <p>ALC Compressores · Sistema de Inspeção</p>
+  </div>
+  <div class="auth-card">
+    <div class="tab-row">
+      <button class="active" onclick="switchAuthTab('login')">Entrar</button>
+      <button onclick="switchAuthTab('register')">Cadastrar</button>
+    </div>
+    <div id="auth-msg"></div>
+    <div class="field-mb"><label class="field-lbl">Usuário</label><input id="inp-user" class="field-inp" type="text" placeholder="seu.usuario" onkeydown="if(event.key==='Enter')doAuth()"/></div>
+    <div class="field-mb"><label class="field-lbl">Senha</label><input id="inp-pass" class="field-inp" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAuth()"/></div>
+    <div class="field-mb" id="confirm-wrap" style="display:none"><label class="field-lbl">Confirmar Senha</label><input id="inp-confirm" class="field-inp" type="password"/></div>
+    <button id="auth-btn" class="btn-primary" style="width:100%;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px" onclick="doAuth()">Entrar</button>
+  </div>
+  <p style="text-align:center;color:var(--muted);font-size:11px;margin-top:12px">Admin: admin / admin123</p>
+</div>
+</div>
+
+<!-- PENDING -->
+<div id="pending">
+<div class="pending-card">
+  <div style="font-size:44px;margin-bottom:10px">⏳</div>
+  <h2 style="font-size:17px;margin-bottom:8px">Aguardando Aprovação</h2>
+  <p style="color:var(--muted);font-size:13px;line-height:1.6">O administrador precisa aprovar seu acesso.</p>
+  <p style="color:var(--label);font-size:12px;margin-top:8px">Usuário: <b id="pending-user" style="color:var(--text)"></b></p>
+  <button class="btn-sm" style="background:var(--border);color:var(--text);margin-top:14px" onclick="logout()">Sair</button>
+</div>
+</div>
+
+<!-- MODAL USUÁRIOS -->
+<div id="modal">
+<div class="modal-card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <h3 style="font-weight:800">👥 Gestão de Usuários</h3>
+    <button onclick="closeModal()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:22px">×</button>
+  </div>
+  <div id="modal-body">Carregando...</div>
+</div>
+</div>
+
+<!-- QR MODAL -->
+<div id="qr-modal">
+<div class="qr-card">
+  <h3>📱 QR Code do Laudo</h3>
+  <p id="qr-subtitle">Aponte a câmera para acessar o resumo</p>
+  <div id="qr-canvas"></div>
+  <div class="qr-info" id="qr-info"></div>
+  <button class="qr-close" onclick="closeQR()">Fechar</button>
+</div>
+</div>
+
+<!-- PHOTO EDIT MODAL (rotacionar/cortar) -->
+<div id="photo-edit-modal">
+<div class="pe-card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <h3 style="font-weight:800;font-size:14px">✏️ Editar Foto</h3>
+    <button onclick="closePhotoEdit()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:22px">×</button>
+  </div>
+  <div class="pe-canvas-wrap" id="pe-canvas-wrap">
+    <canvas id="pe-canvas"></canvas>
+    <div class="pe-crop-box" id="pe-crop-box" style="display:none"></div>
+  </div>
+  <div class="pe-btns">
+    <button class="pe-btn" onclick="peRotate(-90)">↺ Girar -90°</button>
+    <button class="pe-btn" onclick="peRotate(90)">↻ Girar +90°</button>
+    <button class="pe-btn" onclick="peToggleCrop()" id="pe-crop-toggle">✂️ Cortar</button>
+  </div>
+  <div class="pe-btns">
+    <button class="pe-btn danger" onclick="closePhotoEdit()">Cancelar</button>
+    <button class="pe-btn primary" onclick="peConfirm()">✓ Confirmar</button>
+  </div>
+</div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="app-header">
+    <div>
+      <h2>⚙️ Laudo VP · NR-13</h2>
+      <div class="hdr-meta" id="hdr-meta">—</div>
+    </div>
+    <div class="hdr-actions">
+      <button id="btn-approve" class="btn-sm" style="background:#7c3aed;color:#fff;display:none" onclick="openModal()">👥</button>
+      <span id="hdr-user" style="font-size:11px;color:var(--muted)"></span>
+      <a href="menu.html" class="btn-sm" style="background:#1e293b;color:var(--muted);text-decoration:none;display:inline-flex;align-items:center;gap:4px">← Menu</a>
+      <button class="btn-sm" style="background:#1e293b;color:var(--muted)" onclick="logout()">Sair</button>
+    </div>
+  </div>
+  <div class="tab-nav" id="tab-nav"></div>
+  <div class="content" id="content"></div>
+</div>
+<script>
+// ═══ STORAGE ═══
+const UK='laudo_users_v4';
+function lsG(k){try{return JSON.parse(localStorage.getItem(k)||'null')}catch{return null}}
+function lsS(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}
+function getUsers(){return lsG(UK)||[]}
+function saveUsers(u){lsS(UK,u)}
+const MASTER={username:'admin',password:'admin123',role:'master',approved:true};
+
+// ═══ STATE ═══
+let currentUser=null, authTab='login', currentTab='capa';
+const ALC_LOGO_B64='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIwAAAB5CAIAAABk/V7DAAAt3UlEQVR42u19d6BV1bH3zKx97rm90aWJyAVREAt2gyUx2I3YFZP4YgkoKlaCDQv2FhN9wfIZY4wSoz5Rn0axoIKCYEEUECxUpd5+7j1nr5nvj1lr730v+AIJiOLdfyj3lL33WbOm/eY3s1FEoO34fh/UtgRtQmo72oTUJqS2o01IbUebkNqE1Ha0CantaBNSm5Dajk1+BFvBb2CWjQa3EAwRAIgI85YBxogQETfoZn/o2J2IbOBPbdOkLSmhKTMWLFq6Oi8vJQAgAEgiDAgIpJ9I6A8KICLkmI8cskNZcXrV6trJb8wiIgHxH0EAEMDoK/of0b/8q4BG7wAAAFHfQjQCnDgPggj4GxB9UQARc9YeuEfvrh1LN2ST/YCFZFkM4QefLBl27gOZpqwhFDQCgGiAQwFBDABJnLVAIAKQlAmq1zaceuzuJxwyAAA+/3Lpb0bdkkrliYCgIAWARgQFGYEECQEECYmAAcgIoIoBTZ7KCgBF5YQGgIAQAABJL42AgBQbKwwEkAjrM+Hz//3rrh1LmcWYrVRIIoIAzdnwgvFPhrmwXUWxtYxEIoJkxAaA5LcwAYigAUAiyGSyuw7s8ccrjs4LCACCICgrLQ6CQKXLYBHzBBiQUFcZUbyWAKIICvk/nYYREomoWhlABEIEAkQnKgF3EgFBAwDGmCCPA0NbubljFmPopgmvTP/wy/blhbmQAQCsiAhy6A2RAKKIBTQCgsgiGDLcftkRZcX5uWyYygtExAqTiDADAhAyh4AIKM7mOT0kRPZmkABQwCIaEBECZBEkAKe0CABigQygAFgAAgQQFiBABkBBsaHd8GiAfpiGjo2ht2Yu+P2fX6koKwwZQASEAQRj56ESEnDORgzhmprGC4bvf8DgXgwQ5AUAICAIiKguRJwvERFgAAEQEUEkiBxSi5UVUWkigVj9OOoXUZy+uw9yQuCCAOBc11YqJBFBwNr6ptHj/wEAhGpo9OeLix38SgAIoAFhQ1jXkN17UI/LzxwiAHXzF9Z9tRgAUPS7ThKIhM7hR9GDehwvQiJAAhFEcQYNGCJBIiKlRATAqK3D6IZAxSMCKMJRhLJ1ColZiHDcPc/Nmb+8qCAdWgaxiIhEgIDOiwiqlNAAABJZawvyU3ePOSY/nZIwnHbRmMyKlW6vi0Z2CEgiltkCAhK5uABJ7Z2IBWDEQOMCEQQQFHHODwnJqAoikpNupEl6G/qxKOrbWs2dGrr/fWPOAxPfrijLD61FDasQRNjpELhw2ke3Yghr6rNXjThkYN8uAPDpfz+09OXX0+VlSdE7Q4SELrZWk6mv6J4nAQS2PsBGERHQTJj9ghP4UM9rD6hIEEmEMQrcNya3ox+WoSPEVWvrLrnpybyUabEZ2aKwgIgwAqKaGkRhGxiztrbpiAN2OOfEPQVgzUdzPhh/e6qsVCx7g6iqpBtfABjUS2kEKQyIojoK6F4R8akQojA4PxYKWE2PBFg3C6JGICzCACAcgjCS8fLb6oTEIoh4+a3PfLFkVUE6xW63umQFyGCcNoouJRE1NWc7tS++/bIjCYGbm9+5dGxTYwMGRqKFRkIkdI6dfcTBAIjOYgnqQoOIsM97EKIbEBa2AIQue1UHxAAEIgiC6O8NyV0FaSsUkrVsiJ54YeYTz79XUVYQqh4gxVk9M4Aaqyh6JkRobMrdNPqwHl3KAXH2nfcsnzI1r7SUrYXYHqGGGahnAwIRQOMyUVUSEQRNdhCEUaJvo2hsQuqHEISBrSZVIGoMUSRUn6T65MKQrSxwYBFjaPHytWNveaogbdzSaowEAhozay4izliJsDGwpiZz+jF7HD90ZwFY+d6sj+/6Q7qiXLyE/EKzW26x3n6Kt6UISKIBOhkfRTMQRuYKNUOKHZABAE3O0GG4HKm7C75FkrjT1iAkAbcjLx4/8ZtVNem8lHW4NYGwc9GoyJjm9gIChqixsalvr07jLxgqLLYx886Fl9lsSIZQBJMoHBAAeMxNbZ3+g0QEmBF8HibglDVKpIhcsCARjufBQ7EgKl9FA9nvAIo2QizaH7qQ2LIx9OATbz03+cPy0iLLAsDqzwGAXQ5LCG5xUcMyEWa4c8xRFWWFSPjRTbetmvV+XkkRW26xewUAnHeLguMot/X2zgfiiODsFbnojUMBBhRAh/MBWxBLJnBRnGDsvdCFGpgwtVuDuVP4Z/4X34z7/bMlRfnMDMwIBlrYd+/wXXRMQRCsqcmM+uUBB+yxPQB8PeXt2X/4U155BYeWHODTcoWcjCVOWjXTERZhZnaSc1EGeIyCiAKK8lIN1okQCYRRPwOsepT4U/+5EdFd8H03dCChldHXPV5blyktLgxZgMg5DHQQjto4DSMEJCCsrW/aa5deY876qTDnauumXzqWCAERmS1KC01SGbNFDBCIxQoQoqibA13PqAwhbK2EISuoI2AVh3VpFrEIgDGIAYgFZFVJcfkWCyhCkUWipqzlDU5mg++/obvt/n++Om1uh3YluZBFLELgNq6HwnwwrWkJhJbz08HdY47JTwcA8P71N6+ePSfdvpJzoXj3zZGcnDoaEYtgHCIgLEDiUW4BRgBEqc/kzjvj8J8fMDAXMhlVPnZaiAlYT3VNUb0WKqPyFgQKmQdWdQYAIvwBC0kN3ayPv7p9wovlJekwZABCML54R6KmSQBdlQ8B0RCsqm647bJfDOzXFQCWvPjyZw8+kl9ZYUNrEG2ELqBEkYNKRTNfJANA4nyPIkwqV0LEXMg79uu57+C+m/BnbkhZ+XsqJFWOpubcRTdMbMpmi4vyrWWnBSIe8CFXcBOLrk6D1bVNhx+w029P2ZdZcmvXvnf5lZgyug6hCAIQIiMgY7y7xYf0qPLWKBkQySFMRAxMYAgkk8lYZmvZmA135+sXwwZTHL6vQnLlontfmD7rs3aVxaFlVRdXYQNBB/5rcUJQGImas7Zju+I7Lj+GAIDwvSuvrVn4RV5lhQ1zWjjnGNsTjvaDi6CBVCOBQEBI4UCrsKmC3CJAhIZIQ/zvbDXoeykhNoamvDvvnodfqigvtJY9nEwALGxdmumTeAQRAEJszDTfdPHRPbapAMSvnpm08K+P51eUSxhqVmQQDMbOukXwQAGKi+W8DXI1JPHQgAAjbhneDn0vDR3W1mUuHj9RqwyCxoMzFgCRjCYuLn9HEKBUYNbUZoYfvcfxQweJSOOyZdPHXGXy80MW9ImKxDUcxBYmiEWsQ3eAHNzgUKUEsgDGhRJtQtJy0TV3PTNn7qLiwnwrCGKj0o4v50RMHRFAY6ghk63atuMNo49kZkScOXZcw9KllJ9GYRGMMO5QAEB5CInFFkEfH8YFBlZRkd8I7Nwf/Og1SctFL7z24UOPv15RXhRaQQFE9fzoUTJHXkAkZRgKs2W4Y8ywyrJCIlrw6OOfP/lMfkWFGjpCYL/y5PDsuKge5b/udbEASI6e4OlawkAGBHFjat5bp5BYhBBXrK699MaJqbzAg9wKrJCHZDzexayrakywtrZp1Ok/OXCv7UWg/suvZl1zvSkqEhYBdHCbkyogggUBcGKP0xqJnJMrUym3K4bYRLSy92M3d8KCiL+7ZeKXi1cW5qfZWTP21Rrx8Td45BuMgdq6xj0H9Rpz9s+ZGYBnXDK2adXqIC/PMqsuWNHIzQmXAAXUCMZ65E/uogYRy6wIKYsDA1FAMMmg+xEKSTOPxydNf+LZdypL88MwRGmJEDkoSG9Yq9oSWs5Pp+4aO6wgP0VE8x/486IX/xmUlYoNU4jGF4gEwbN1EBN1iFiTnDJ5lXJXIYeuggAwKjPrRyskLRctWrr6itueLCpIu0IEIkCUc5Kvyrg1FRFjqKYuc+XIQ3fu11VEqj/+5P3rbkqVFINlRGSRiMaPAM4zYVQvSsYN1p9fqVhRVuTUV8AjRC04yz8mIWm5SAQuvfHxFSur89IpiVgcUeUN2FNEnNEzBGur6w4dsuOIU/cPczlEXDr5tczKlZSXBpHQoaMurPNqFFlKbBGkCQBYdNV3VCBV8WxhVqYCiGjm9CPNkxRFfeBvr016eWZFWWGYC73BiRdW4zpXZ2NGMtlQOravuH3M8XEqEwRIRrWHQCjOaTTJAgZkAVYgNs5m1VkhiEOlRaw/JyIFqECushsEtkQEvqWFpPDP3IXLr7v76bLiAqvovrI4XKWAfEYEIFY3NaE0ZJpvuuTYbbtWWsvGRQUiIp77jgzAIoFPkH2hCMixfiOn5IhzAj5wcNi2eMxIwNOPAGGLtNlsSSFpITUM7UXXPlpblwlSKWFn3DyepsRrcPRSIEAMUmZNdf1pRw0+/tBdWgGdCUQuYckAAZBBDHrKIiTr5wBgHc1KY+4EpCeJ6C5iHf+4hMTMRHT3Qy+9Pm1OWWmBZZ+ogqMriFgXggOrzzfGNGZyfXptc8NFv2jV2YOuwgQYMUt8GhuoF5IEabgFV8cgotgwLk053dJyKgqIr7c62P3HIiRXLpr95a33TSovLQqtBbES2R/nKABEkAxpnwmwsLXMd4w9rl15kQJIrX4MemQCAGwUmPho0SAISKhZqUQ6wypvh64qhutYj45tKszCNgG8/giEpBs205QdPe7PzdmsMSQsDhXQNNVZQwQRYavrmAqC1dV15w4/6KC9+q63osMReR/AIJKoB3LWkwWUmZcmpJjRr4JkxyLXgIWCyFcpPd/9uYVaV2lLqRER3nTvpOkfLigpSodhiHEKqY1z5JgFFChTxxiqrW/aY+feY0ccyiy0TjlHfESgkYdqC3sdCjQgEcUgom6JyE6Ss49RlCKO0iUOm3Akih8LwKoo6pvvzP3DQy9VlhdbBkACMq4vyFk561Fu13VkLafz6PdXn5SfTkXrmTzQ0+YV8uEk50BFqNwsn3+18Ga+vUKEAY2GDOCYPVFfDXu+2NYuJOXr1tRlLrr2USRA8gRH5cl5TFqUcQ8AwAAUEFXXZq4496idd+gWx9zryYvVPBF7TfQsX9c1gZLA6zChgw7AjdJohb0lssyxJfwxmDvXXXTHk598trgoP8VWHCPNVR80VgjRc0hBwBhcW9t42EGDRp5+oLVM30IuUCUJgR1C4AjzIAqUaliicRtiK7wBhH2xAqNmP58IR3clW2oSQfDdG7oXXp31//72amVZUWgteDpVxIECFBSjTEVARqLmpub2lcW3Xj6sRdSxrvhdrors4VLNrVAiZNQFJCho1z0Ls/ZlCFgAH3CLS5c0Q5OtXkiuXLSq5tLr/pqXF4iPEdC7BREraFCLCRFog5AN+faxJ/bq3h4A1ttNn+QNE7jOVERkgVZ0axS0GCMYSWVSJJWBQRFCDRy0SKhJEiICMLNlZuYNsHwRGXb9b9AG4xffkZAURSVDv7vxscVLV1aUFeUsC6qbYBQURERCibwJIgIR1TVkDz9o0H6Dq5Z+UxO7IsdERBHJT6fKi9OuruCZpa6uHkd9rjEMREii4DoOG5wwEssortUSYwBchEUKCtKGaIOpQvhD0iRFUZ94dtrEZ6dWVpSEllGXzpNJ0Pfyo4hDYpCYpSAdzPxw4X7HjVcpSGTPgAxBTUPusCE7PXDDyeBCu6gTRssTGLVmarZk0GW4LXmlPv0VQCR2TZMS9QoKClHAlosK8h56/LVXp85hdu0bCAiuVRZQ+zVdO5px1/aNSuDycRFBY6i2MXfuqfvsO6iHjgzZ8kJScGHx0tVX3PRYYWHKWhtNEVFfLsIYd+JDBELreIy1tU3geN5GXb8gAUBggurahobG5sS+FQQMdeQFuljcd8mAQWcYubU/Svb+C/rGNAHGBP0BQFIpM/OjL6bOmu89nZLw3RgWtxl0Ag4iIokgUuBYfmgADQgKSBCkaqszh/2kat9BPUTkXypc8F0YOhEAvPjah1euWlNWVsKMrp4mkRoZ4RAxL7Jjzh0BiEgQaFux1h8AjFGHYQwGhgi51XorM8FhtEqKdFMTJNFE1MobiO9SUolYJNIbR0MgykAOQLAgjQWFAYBxOqRwnmvRNeJcDSEgAyOm3O+hwEc8KECpVCpkyUuZ74u5c+Wix159/pX32lWUhKHV7Scu+mftyUY0cYCmFo8BTODajV1vGDh2lQCAFfZM/SiZ9YkQq6gQFeLG2OFIxJOQ9Xhz30zh6ODgmtrVhDEDEosIE2oiZa0LJNECIqAVQOEIUEeREJVFwzlAA2BELCBYyyy04fkPfQeGbt7CZePueLyspMh36IH4iTCuChAV3LwjRzSAAGxdyzGaFozG2JMRJIwk+mqFQTCIDvJLaA84qmQySnDYuDA7aMH5Jw/GC8QncJri/qMQhUJRItbLmlyeBjodxY29EbaaaSRO9T1IZl25yPLoqx+qr88EgVFKlAijgpUCgkAKPJBJdG8nh5mJIChbyHeKCfgVcWYzLiY5IoQVDH3AFnP1JIbnEpGXL/4SJQgM4gA935iOiIAsIB7eYxBGACITlT9Ek2ZXQXbQSZShJ7rPwXFmhbe8kLRcdNf9z70xbU5pSUFow6huIOxyG5WZoxK4yFn/yUgEJtCBMqhrIQ6bAzdtiYCSZTogQONLqrYFPOdtqy+HtMieVDWdykbQq85iSPS4RzMERHy5y2F9LfwbGmyVm0HUiBmxzEm+D93nauhmfrTwtnufKi8tspa94VIyNzhQWaJASJWDfK6JwqwMSGGnIaQscGeCCGPyjzN3BNFSAKG3LBHhyJfQI7w8KWCxYaxGiL5xLMbFkQIt/bkhauChPNXeOEhjt/38VE6M/ajrj/c0ii06tibqLrrwygdzWUuEjvuprd6i8wExrpUSIQauEaxVERXivFOL2X7qH3rYmhOBg0PutPMxidExgAUhjFiS0hL2Q69MkJiiEYcqIsw2p/oZDfBCIg9PcOwnwSfW0V23iPijpqQtPbZGUdTxdz85a/bC4uJ8jrpaXfVM/28BQaNY4dAFC0pyQNUSBrY6nSGq+5DSEBCBLQgnmSEW/CwnAdIeDJ105kfUuZVzUB5CYq3U2WA8kAsRjK9ZCBB5piXFU5205V+s52VIbMHcW+ImA7QAnxyovoUDB0VRp7wz548PTaooK7KhBdYBfOwY8cIY1cijuWWeoIOI6DwNuijJUed0/FIuxj1bmjsl1BmXfApECVPUTu4pKKxxgcRLh5IYwuZeZRAFrnRWsrggQqSF8rEgGUgoh8ShjcSRpybFbggru260LeWT3DC6uszoqx5EighZ4ptbDcaz49TvhtGImZhkpW1iikODIKUAESR0cICzdsZxS+MQ3DlmfTWZCSl2ZzGGdG20w6PmcnDtaG64mqvUoicqqdJY3+7kN4lP9RIVLR37GUV9rslJ/HwqiQZGwBYSkhq6q29+dN6CZcVFhTYeaOWzCnAGxM1E0NFyyinwb/tCtSu1KS3EGR9nUiQufCeUSdCXkdBFCuqExJk78KOcEv1JGkx76ovEUiaIey0QfH0dyaG1gEqjBBH2HExyhs7VoAyKHwqiYw0Q46Eg2rb23QtJDd3zr8x8+IlXK8uLQ8tERhF58Nw5l/2wC769lfeRrosd4iakqIjq2QveUcVhrkSBA6mU9FxeKyISbCRhf66WSbAbWowAYMg4KqTzjzppS9n7RBSA3wQAQkhAhihQqNGPPBFA9lrHCEImQF9BjGfZfMewkLhyUfVl1z2cTue5/lN0v0WrpegHzYrYqGHBo6yBm41FCEI+/GNAEAg0e0UEISQ04pv2k0PqrQADBIgcTarz1DsRsA5cdwBCpIAiEFoGYhAUG4JRq4uMFgF1rq1OlNTgWyAHpFMbEClwaByHbpMoxugCvVSkc4g6EsoNLBegMJQtMGxDE6Mx1z28aMnXlWUloWVQpMApu2Jc5AVjPL9KmrPWWgHIKtfXQeAK5anj4agHQrm+oc4HCAJqaMw2ZUOvEQIAYbz4TgXVPBGATcBK0RmDlKksLzWB9uEaQU2itGARtLyuIzwLgU4ncNOffGKr3YCR5VD77Oe0RgUTAkRDyILp7xhgVRbcY0+98fdJb5eXF4bWau7v2rWZQYdYgB+qBQSAJjDVtQ2HHbjLxeccKSxIrbrvvLnzs57ikBndmKbQcmVZkViLxiBQFILrpjaO1wCAoCNOvJyEFWll7l/V47VJd0QxWKtCbqK+SutAskkAMJqHvO778dZwmbtaQJaK0gIA2JDp4MGm0qGvlqy46sZHigrzdHyY94quPCMigIxu3p8zgs1N2a6dK++4evg2nSr+I0sbholoOgLfkLX27Yl2UWFEQ/BUfj4SpfPTXTqn4ft9BJvEGwHgJVc/uGp1TXl5ac6GjmuoKq+5YYvSlgKr0Jy1N405eZtOFbnQGtoo3iFGESMmkhQCRHFBNkdvee0womVZlSW+df5lqZJia0N0/FblHqP40ZyQqBAikKbkmqJxPLmOlKKcbWiwDRkhtPFY8rjeCNHgXdXxgJpqaw++8YrtDjmAv53/tMmEpIZuwiMv/u/kGe0qSkPLSEYsRxPOUAhQIh6c/oQgoNVrG355wpCjD9ndWk4F5t9lBCSSelfPjjn/EFG+XeMYBAjWlVRh6etvihaJPcCOfkgAAYTAIbtEGgUEyPqyFIuw2m0hAWJhAxiSn6Tr4Q+Kxt2JL+T7YqMYk2lek1m1JlER3mxCct1Fny2+7rZHS3x3kYCO6EaMbTqKG/8jCEiEmUxzn+26XHfpiSyyIWOqNlyho2HQem0HFjgTJwGgdUoGQUlxhI9qq7pLdQUYJCWQiqirIALGt2KKFbDABChCDGhEADFkduVJQASwIgaQERjEiEOcWEAhYAgM57LGBJvd3GnmmcvZ0VdOaGjMlhSnLTO4rkWMkRtX0HGdXIiIQrmQbx57WmV5sWWmTTSkJyL5J8ZmaixGqA8pQAhdlEkCAlbrJToEjVmcTYs0U+JBbVrTQ09o4YhHRgLWz/pET29WYYeagQhw1BaKYvWZJBaEmb+DZNaVi/709JSpH5WWFlobrZON63Ax9OLoOMbQ6pr6s4YfcsiQATqgeFN5V0c9jcryynfQ/gnXOe56YuNu54j8KC4oNxFhNQZNwThyhcMQybMvIkJLBJQ4WxfPkUejqJL4B1m4wdXwXcwF1xlN730w//Z7n6yoKLU2omG74Zaep0Va4vPJOjY0Zgf26zH2/F+s2130nwtJi7M2GpDha0s2sSTW1dNdszn4lnPyc405QZwgRzyLcyWMJq8pqKH9tM7xuUqVL2Uhg++Kjhmcom1S2Hq+0aYWklr/xkzTRVdNCEMm8tNLxUZjmpPKhKQzzEm7JG67+pelxQVaW9vEtKREKdQAWAUaJK7s+C41N2czQmIl5iZFMYd7Kog+XId9L4b1kwo8gui4zeoDCZAFDFDgGgUlFLCCnBh5TAIE5LV0swnJdRfd+fisD+YVF+WH1jo8P54s47if4htKBMQYWFtTf+4Zh+4zuMraTeaK1onLI3AOTCIt1vUw6LirErFWBVwdUcQP98Ro9qp+z4CY+MwtcMMESRYRMARmkFBEMzMECCIanzfIgBjGA3g2j5AURX397Y/ue+i5ivISa5mcv7Fu5ihgbEv02TQCQZBqaGjefVDV5aOO3eSGLgZYEwVy8ctkxY1WTUVP30nMcYihAoxj9+jdEMSJzVWBogns+kieeGiH73nS5x34J/25CpZExfvI3m7U76eNNXSEWF3TcOlVExCjySEc7RLfwujZF8KASIastUHK3H7V6fl5KYDN0mjPriYbN/FF0580a3HBt0iiwcUlCVbA+pQWPAtMH/4WR43KjIiaRaHVg13cVhWJKmYCiaIKejqKejJlEm0WITELIo67+ZG5878qKsxny3HFBUmDJM0WKGZCoUFcW11/0dlH7zZwO2t5c6hRq0yYEpAaRtVQARZ08yEEo2ErIG56gAAYjKvFhC2wg0Q3gETuKAF2uNYLVzhEUcCQ/UAj6wgSEvWC4ubQJAUXnn/pnYf/9mJFeXEYOoeK7jFQgugKOgjIjmsIBqGmruEne+1w/pmHM28OV9QiT8qJROwtJQqzezQOkOs+j/2X+iQLEplKTEyYigZ9+mHtvuGpBWfWPYrEAud0GIujVKA+WpOiJ9iJL0K5J5ZshsCBRYjo6xVrL7tmQn7aP71TybTOXJOPiaKHBxAhhpaLigpvv+bXeakANudAEUziYwgG0MbhniCIFWCRIOIeofiQjJQpTu7xCm60pPHYQZS7JyKOFtqgDR2ciOx1q0ZcTucgUYlMAgkAaVMKSVgQYez1Dy1euiI/P4+ZEcUJwsmEEQ3pUwKUaiJsDNXUNf5u1LH9q7pvPkOXaIRFozPWABExICOJYM0QImKoKAhG1D/wWwrZD8S3HkiP3lLTrePUDBJ7Tqp/JAJqg7tBcnPZMPJhSOqIKOZziW+Q2ZSwkEZ0f/37KxOffq2yojSXs64WJ0q3BsRARJS3LjrHjIQMra6uP+SA3c45/eebJ+Zu4Y1EmK1ltlpDBIDAg3gRMEq+qSai0fqx71EPM7KwfoXdoCNhrwx+CKsbHEBCoYuRlM3EWsoFlxhFOTVG2uYuhNbGjwHaFEJiFkO08Itl19/2l4qyosAYQ0aEITD6bBpPciff/q1tQmjZdutSeetVpxMR82afFGeCVLqwKMjPh8ACiImCmdYumtDXI1xrboTyCekgFM9EFRQXGYKQ+JzUghjR0eEmZvSL6ABX48u+xkMYgcPFtX6LAhIYI83NFGwocPqvB10rmrC2um7Fyuq8vIAd1J0ILzHm00bRqT4zoqyksFOH8o18zOC/eeTq6nM1NUgk69RN128hE59rFU+vU3xtHW9LzNdocZ71+8l1Lo0IwJLfriJVWLBphPSfVxC2yPixrekINnitE48fjujN7mlCifDCdyARIURONzGygv3z8aIggtlF7cmwIvr8v/yA9huTo3CBqw2Jjw6Styfrf0tcnB5lVYkCskhi2AYmIkiJNp+aFr8R/SX8CrSMvVq8hQgbaGE2TpNEgGX99YV1c6B14Z9Wr+gKJKXV6vOttFB7YFu9ktwl/8cZvk2hvw2jEgGRFr/IC+P/shluOM46J0/uuX8nMtpwIUWupaY2s3DxylzIFWVFvbpVpgKjEhKBj+d+VdeYLS4q2KmqKxFGi7j8mzV5qaBdZenXK6u/XLSipLhwx77d9LSfL1759ar6DhXFfbbtEF2lprahvqGpa5d2APDxvCV1Dc3tK4v7bNspWu76hkxNbWPXLu0yTbmP5i2r6tWxvCRfV+GTz5auqW4sKy0Y0LdbK/F8PHdxTUNzeWlRVa9OqcDREzKZ7Mfzl+SsdO1U0bNrZfKXfrOq+svFK0Wo2zaV3TpXRGfLNGVXra7ttk07RJwxe1H3LhWd25foJRZ8+c3XK2uLivIH9u1qjO/tAQCAeQuXr6quLy4s6Ltdp/x0auN8xoYczCwizdnctXdM7L7HyMK+ZxUOuACqzr/i7pf0A29M/XjvIy4r7jO8YqezivqP2HPYza9P/0xELLOIHHDkhWedf9sDj77cbofhhb1OKew9/OzLH6yty1x8w8TiAeel+p9futvlV979v8ycy4UiMu7mR3bY+8y3pn/60xPGFVX9Kt3nNyUDRp51xWPVtZnQWhH5/Z+e7j34N69NnbP3sTfANmdNfPEjEZm3cMnQk65pt9OZ3fe6sGjHkUPPuOerZWv05r9ZWX3Mr8YXbj+83S6jqO/Ic655Um976oy5Aw+8oLjfGZWDRqV2OP8vz84UkdDaTFN2zA2PdBrw64odzyzd8ezKXUdfdONTDZmstVZEnnnh7U47nPzcKzOPH3kfdDjj1odeF5EVq2pOG3lXZf8zuu0xqmSnEXsMu/nDeUt1BerqM7+58J7iqtPb7Twy6Dfy8LP+xMzaqbQhx4YKyTLncuGZo++Bdkeeeu7vX37z4w8/XfzA36e9MnW+iEyb8Wn59if2/8l5z02eNe/z5f94cWb3/X9Xsfvl7328WO/j58de2qXfif33G/Hw45Onzph35C9vKqr61X7Drt/1iGufnTz75bfn7n3inVB1waTXPtHLjb3ugcrth22/19knnn3HWzPmvTl9/knn3w/dzxw5zi3uvQ/+T2Wf43c44MJ9jxt/159f/+yrVTW1DQOHjNhuz7MmvzV70bLV/3hxVsmgCw85477mbCgio8bcl9/j2EefenPe518/9dIHz70+R0QaG5t2PfDcvvuOmPLu3LkLl98/cdqHc5epUM+55A/Q/vCLr33kk8+WfjxvyXnjnoBtz/6vK54ILYvIS5Ond+h70qBDLht4yO9uuf/l9z9Zms3mDjv56vKqU55+YfqipasmT/2kx5Ardjz8xlVr60Xkjnv/AR2OuH3Cc/MWLn9xypxHn50R7ftNJqQwdNsHKg8ZMWZCa/lZe9QpV5b2Om723K+iFydPmxv0G3XChX/RP484aWxh16P++fr7+ucXi1Z03+Pc9oNGzFu43O3o979I9b94xHXP6J/X3foXrPzZaSNuj06Yy4UHDf998S6XfTRvmYg89uTkvK5H73/MlfWNzfqBu+77R942R85dsDT6yoNPToOqC6Z+sEhEBh987q4/Pb/VnS/4fGlxj6NHjX2g1etvTpttOhz6m9H3JF8cdt79pt+FU2YsFJFX3/ygovfxOwy5YOnXa/TdZ55/G9sPffHVWdHnX3v3M9h+1F8nzRKRYb+6tsvAXzZkmuXfOjYIBVCb+szzb5eWFo/6r8MEIJezzJILrYgs/3rNtBmfHjxkl5369ghDay1bywfsUbXbgJ7vfLhIR2U0N2c7d6rYe3A/a9kyd+1c2b5d2fY9O26/bSd9pWrbjh07lC1atjYZcZ1+wkEiks2F2VwYBOakIwfX1+Xe/WgxADBDtik85dj9iwryMk05AXjp1Rm9enRetbp2yrufvvHO3CnT54chA+D02YsAYN+9dpr14cIzL5kwe+6SKOjo3KlyQP9eD/3t5Vvum7Rk+RoFkQFg8hszEeTkX/xERHI5m81ZETjp8N1tzr42faHmP3UNmaN+tts2nSoaM80s8uIr77ZvV4oI7uozPltTXZ8uSE+fvQQA9tljx+XLVg0/755psxYko9NNGYKr5/tmxdqKitKO7SsQIAgUNSZErKtvbGjIdO/STuMfY4hFEHC77u0/W7RgbV2mojRfH9wbzeTUUZGWJbSsMycQICDMhhzHiilTUlyAiMY99xh6d2+HCCvXNrrKVkDdt2knIvn5qeam7Jq1dTV1DcPPu4shBSYlFOQVFHfqWK5O+6pLTq3PhI8+9dZjz8089oh9xl90dLdOZUWF+RPuvODcMRMuG//4nQ+//tvhP7vszJ8aQ18u+qakpKhH1w76c3Sb9u7eIVVYsGxlvUfJsbSkQETyUgEhfrOy2lo++9L7BFNAeUKpIJ2uKCvKT+cBwIgzjlhd3XjPwy9Peu2Tnx+0202X/GLHPl1ahaabhtJljMmFNpfLWebEM8HBGCLCxkwTEXrYDBBhbW0mSAX5eYFDvDDubXMkJ+HoJj26nGgJ0klbLFGWVl2XEbFlxekonyeliImYgKyV3j07P/3IVdb6rhSB0Ep5aQEAVJQV33/7yN/+6rAHnnj7viemrazJ/s8fzkgFuFO/ni9PvPafb86+++HXrr7tfwDNVSN/lk4HTdnmuvpGTdFAgBlq6zM2tCWFeRGRwoF7/igtKXpl4rVFhfkugUMMQykpSgNAOi91w5jTTj/x4EeefPv2h19fsqJx8p9HVpTmbyAWs0HmTleqf78ey5evmvzmh35rizGEiJ07Vfbo3mnqe3MbM83GUDYXEuLSb6pnzVnUp0f7TpVF0GrgUlSrRGoJkrZ4xgfnwoVfLFeWCxES4RvTP6fADKzq5GtBTu1Cy6kgqOrTdd6CRczSuWNZ5/alndqXdu5Q2q1zWbFbVgCAXQf0uvf60/7r+L3fnPH50hW1mgYFgTn8oEGTHjivb79tXpgyFwAG79IvU9f49rufEiGzaOf1q+/M5+bc7jt1j7aVSsgyA8AOfXsu+3p1fUOmc8fyzh3LO3Uo69y+tFvnsrKS/MgU9d2uyw2XHjd2xGEffLLkkwVfIyJv2CiHjfBJJx97UEV5yRU3P/7Km3O0MaimvmnlmvqS4sJTjjvok9mfX3PbE7nQ5qWC+sbm0eOfWvFN7W9P3lvNhSEMWg6jMgaDlm0UQRBEyaMIposKbrj777NmfxEEhggnvfrRhMenHLT39oMH9AQAQxQEAWJs3399ytC1axvOvPiP6l1UeMtW1KrxX/D5MvU3oeU1NY3pvKCkKK85m5u/cImeZE1NY0NjtqQoDwCOHLpPn6oeN97z5Dvvz08FJjD0ytS5d/6/V3ffpefP96tyPydwCIiarJOPPTA/P+/si+/99LOl0W9avHwtMwPAgi+WNWbcoKq1tY2IUFKcv049+T8zdwpjDxrQ+4+3jhx1xYNDTxu/84CqynblM+YsH3HaAeMvGHrBOcO+WLzy1nuf/ueUj/tW9Xj/0+VfLKsZN/qoU4/YRbPumtqGNWtq4rYpgbXVDSYBAzPLmpqmmvqmyCel84Ie3Toeeur1ffv0zFl4d87S/lU97v7dL9J5BADN2Wx2dU02Z1VgzPLTIbvePO43Y296bLehY/r17ZmXn//50pquXTpMefTcmpr6oSeMSRcWDxzQ77NFa2bO/fqq847pUFH0yhuzjjrtmr322rVjpw5T3/+yppEvPuMAAOjYofyPt4w6Y/Q9Bx837sD9B4WMr03/vKp31/uvO6G8JF8l3bSqpqGxyS2OyE79e91763kjx0zY64gxA3bqU1hcsmxVfcjBu3+/sLQob/g5tyxfXb/XHgOWr2qcMuOLs4YfvOP2nWSDKdbmmmuu2cDYQUQG7LDt0UP37Ni+zARBUVH+0P13POnwXTq2K85LBUcO3WuXAds1N+easnb3nXvfOmbYaUftrmwHBEin8/bcvf+eu/ULjOucKixI7zu4aredtvVTXaC0OH/I4O0G9OmIiFPe/uiV19//2/2X/ewng5Z+vbaivOSXw/a9c+zxPbtWWitEGARBlx5dDtpvYGV5MSKoVdxncP+hB+2azksRUUlx4d679j77xH17dq1EhD69u7FgY7PdtnuHcRccc/ZJ+4hIeWlxr56d6xubw1D23b3fHWOP32+37dT/bd+ry/FH7ldZXlxb31xcXHjmSUPuHHv8tl0rLTMhGoPtOrc7+Ce79OzWQV2jiAzs3+uYQ/cqKSkEwKLC9MB+Pc4+af8dtutIiL236xoYbMiEHTtUXnrOoZec+dPA0EbgRBsVsFvL34JHfCtIsbFHGIYicu3Nf8b2h0yb8em6OfW/cXsb8QP9+dd7qs199W87No6wr440ih21JyLqW1Wj75oasAVobS1rsSv5CgAkp+SHlhPdxhCQAUTLbEMOAsMivjjv9pYG9MndSITMHKFlep96G8l7A4Qo9mGW9d6zAo/MQp5GQutcnYiSv3HdxUF/oeiu3CwQoo3CWje6q4IoJoy1Yo4lVhzXCd/pX76ijYnWWgDINGVzNfWO0W9aXDQyv0Fg1us+E0ER/t/3hoiJybut75kSU5DWNf7fcvX1L07irv4dIPx791ht/T3DjhrSs2fX7Xt18dWXH/WxZZ4T3XZs3Mb9ft4Ws2hJok1CbZrUpkltR5uQ2oTUdrQJqe1oE1KbkNqONiG1HW1CahNS29EmpB/r8f8BsepRsIC3CeoAAAAASUVORK5CYII=';
+let formData={
+  // CAPA
+  cliente_nome:'LOC MASTER LOCAÇÃO DE EQUIPAMENTOS LTDA.',
+  cliente_end:'RUA PITANGUI, 3.782 / 3.792 – BAIRRO: HORTO',
+  cliente_cidade:'BELO HORIZONTE/MG – CEP: 31030-066',
+  cliente_cnpj:'25.469.594/0001-05',
+  titulo_linha1:'INSPEÇÃO DE SEGURANÇA',
+  titulo_linha2:'VASO DE PRESSÃO',
+  equip_linha1:'COMPRESSOR DE AR COMPRIMIDO',
+  equip_linha2:'VASO DE PRESSÃO – VP 01',
+  // GERAL
+  mes_ano_inicio:'MAIO 2026',mes_ano_fim:'MAIO 2029',vp_numero:'01',
+  cliente:'LOC MASTER – LOCAÇÃO DE EQUIPAMENTOS LTDA.',
+  identificacao:'Vaso de pressão Chiaperini - 407709',
+  tag:'Compressor VP -01',num_relatorio:'Nº 2026/0004',
+  local:'Belo Horizonte - MG',localizacao:'LOC MASTER LOCAÇÃO DE EQUIPAMENTOS.',
+  formato_tipo:'Vaso de Pressão Cilíndrico Horizontal',
+  // INSPECAO
+  data_inicio:'27/04/2026',hora_inicio:'10:00H',data_termino:'10/05/2026',hora_termino:'14:50H',
+  // VASO
+  ano_fabricacao:'08/04/2025',fabricante:'CHIAPERINI',modelo:'RCH 425L AP',num_serie:'407709',
+  tag_vaso:'COMPRESSOR VP-01',volume_litros:'425',volume_m3:'0,425',
+  tipo_fluido:'Ar comprimido',
+  pmta_val:'13,30',pmta_unidade:'bar',
+  pmta_bar:'13,30',pmta_lbf:'193,00',pmta_kgf:'13,57',pmta_mpa:'1,330',
+  ph_val:'17,30',ph_unidade:'bar',
+  ph_bar:'17,30',ph_lbf:'251,00',ph_kgf:'17,64',ph_mpa:'1,730',
+  codigo_projeto:'ASME VIII – Div.1 - ED. 2023',
+  num_ordem_fab:'',acessorios:'Não aplica',codigo_inmetro:'003619/2022',
+  potencial_risco:'5',classe_fluido:'C',categoria:'V',pv_resultado:'0,565',pv_menor1:true,
+  tipo_vaso:'Cilindro Horizontal',
+  // INSTRUMENTO
+  inst_modelo:'MT 180',inst_serie:'MT012305271',inst_fabricante:'MITECH',
+  inst_reutilizar:'1',
+  incluir_placa:'1', // '1' = incluir foto da placa na pg13, '0' = não // '1' = manter último trabalho
+  mat_luvas:'ASME AS-36M',
+  // Notas Técnicas — editáveis (pré-preenchidos do certificado)
+  nt1_cilindro:'ASME SA – 414M Gr. E',
+  nt1_tampos:'ASME SA-36M',
+  nt1_luvas:'ASME SA-36M ou SA-105M ou SA-106M Gr. B',
+  nt1_pes:'ASME ASTM – 414 GRAU E e/ou ASME SA-36M',
+  nt1_base:'N.A',
+  nt2_solda_tampo:'SEM COSTURA; EFICIÊNCIA 0,65 (ASME UW – 12 (D) SEM RADIOGRAFIA)',
+  nt2_solda_casco:'MÉTODO ARCO SUBMERSO DE TOPO COM MATA; EFICIÊNCIA 0,7 (ASME UW – 12)',
+  nt2_solda_casco_tampo:'TOPO COM MATA JUNTA PERMANENTE (ASME UW – 12 TIPO Nº2) (CIRCUNFERENCIAL) - MÉTODO ARCO SUBMERSO OU MAG; EFICIÊNCIA 0,70 (ASME UW – 12 GRAU DE EXAME "C")',
+  inst_precisao:'+/- 0.1 mm',inst_faixa:'3,00 ~ 30,00 mm',inst_sensor:'5 MHZ',
+  inst_potencia:'50 mW',inst_corrente:'20 MA',
+  // ENSAIO
+  ens_temp:'Ambiente',ens_acoplante:'Gel Acoplante',ens_bloco:'Padrão',
+  ens_norma:'ASTM E797',ens_acabamento:'Esmerilhado',ens_ajuste:'Aço Carbono',
+  // ESPESSURA
+  num_certificado:'0008',comprimento:'1876mm',diametro:'559mm',
+  esp_min_calc_costado:'4,13',esp_min_calc_tampo_dir:'3,82',esp_min_calc_tampo_esq:'3,82',
+  // MEMORIAIS
+  mem_pressao_mpa:'1,330',
+  mem_raio_mm:'275,68',
+  mem_raio_metodo:'diametro',  // 'diametro' ou 'circunferencia'
+  mem_diam_ext_mm:'551,36',    // diâmetro externo em mm
+  mem_diam_int_mm:'',          // diâmetro interno (calculado ou manual)
+  mem_espessura_parede:'',     // espessura da parede (se conhecida)
+  mem_circunf_ext_mm:'',       // circunferência externa em mm
+  mem_tensao:'128,00',mem_efic_costado:'0,70',mem_sobrec:'0,00',
+  mem_tensao_tampo:'114,00',mem_efic_tampo:'0,85',mem_sobrec_tampo:'0,03',
+  // CONCLUSAO
+  pressao_operacao_val:'12,07',pressao_operacao_unidade:'bar',
+  pressao_operacao_bar:'12,07',pressao_operacao_psi:'175,00',pressao_operacao_kgf:'12,31',
+  data_calib_manval:'29/04/2027',
+  data_prox_insp_ext:'10/05/2029',data_prox_insp_int:'10/05/2029',
+};
+let regions={costado:[],tampoDir:[],tampoEsq:[]};
+let extras={manometro:null,valvula:null,placa:null,imgEquip:null,fotoEquip:null,instrumento:null,art_comprov:null};
+let artPages=[];// array of {dataUrl, pageNum} — extracted from PDF or uploaded images
+// Anexos de calibração (Seções 15, 16, 17) — aceitam PDF (multi-página) ou imagem, mesma estrutura da ART
+let calibPages={manometro:[],valvula:[],instrumento:[]};
+let checkboxes={
+  carac:{interna:true,externa:true},
+  tipo:{ultrassom:true,visual:true,liq_penetrante:false,videoscopia:false,teste_hidro:false,part_magnetica:false,metalografia:false,radiografia:false},
+  evento:{inicial:true,periodica:false,extraordinaria:false},
+};
+let itensInspecao=[
+  {id:'5.1',item:'Prontuário',status:'AP',obs:''},
+  {id:'5.2',item:'Livro de Registro de Segurança',status:'AP',obs:''},
+  {id:'5.3',item:'Norma de fabricação',status:'AP',obs:''},
+  {id:'5.4',item:'Identificação do Vaso',status:'AP',obs:''},
+  {id:'5.5',item:'Funcionamento das PSV\'s',status:'AP',obs:''},
+  {id:'5.6',item:'Calibração das PSV\'s',status:'AP',obs:''},
+  {id:'5.7',item:'Funcionamento manômetro',status:'AP',obs:''},
+  {id:'5.8',item:'Calibração do manômetro',status:'AP',obs:''},
+  {id:'5.9',item:'Abertura da PSV/Alívio',status:'AP',obs:''},
+  {id:'5.10',item:'Temperatura de operação',status:'N/A',obs:''},
+  {id:'5.11',item:'Pressão máxima de operação (PMTA)',status:'AP',obs:''},
+  {id:'5.12',item:'Teste hidrostático (TH)',status:'AP',obs:''},
+  {id:'5.13',item:'Ensaio de acumulação',status:'N/A',obs:''},
+  {id:'5.14',item:'Corrosão e espessura min.',status:'AP',obs:'Dentro dos Padrões de Segurança'},
+  {id:'5.15',item:'Fundações e Suportes',status:'AP',obs:''},
+  {id:'5.16',item:'Acabamento externo',status:'AP',obs:''},
+  {id:'5.17',item:'Acabamento interno',status:'AP',obs:''},
+  {id:'5.18',item:'Válvulas, registros, conexões e suporte',status:'AP',obs:''},
+  {id:'5.19',item:'Instrumentação "Pressostato"',status:'AP',obs:''},
+  {id:'5.20',item:'Aterramento',status:'N/A',obs:''},
+  {id:'5.21',item:'Pintura',status:'AP',obs:''},
+  {id:'5.22',item:'Acabamento solda casco',status:'AP',obs:''},
+  {id:'5.23',item:'Soldas externas',status:'AP',obs:''},
+  {id:'5.24',item:'Tubulações integradas ao vaso',status:'AP',obs:''},
+  {id:'5.25',item:'Reparos',status:'AP',obs:''},
+  {id:'5.26',item:'Inspeção Dimensional',status:'AP',obs:''},
+  {id:'5.27',item:'Instalação Elétrica',status:'AP',obs:''},
+  {id:'5.28',item:'Espessura Mínima Costado',status:'AP',obs:''},
+  {id:'5.29',item:'Espessura Mínima Calota',status:'AP',obs:''},
+];
+let acoesExec=[{acao:'',prazo:'',statusExec:'',resp:''}];
+
+// ═══ AUTH ═══
+function switchAuthTab(t){
+  authTab=t;
+  document.querySelectorAll('.tab-row button').forEach((b,i)=>b.classList.toggle('active',(i===0&&t==='login')||(i===1&&t==='register')));
+  document.getElementById('confirm-wrap').style.display=t==='register'?'':'none';
+  document.getElementById('auth-btn').textContent=t==='login'?'Entrar':'Solicitar Acesso';
+  document.getElementById('auth-msg').innerHTML='';
+}
+function authMsg(h){document.getElementById('auth-msg').innerHTML=h;}
+async function doAuth(){
+  const user=document.getElementById('inp-user').value.trim();
+  const pass=document.getElementById('inp-pass').value;
+  if(!user||!pass){authMsg('<div class="msg-err">Preencha todos os campos.</div>');return;}
+  if(authTab==='login'){
+    if(user===MASTER.username&&pass===MASTER.password){loginAs(MASTER);return;}
+    const u=getUsers().find(u=>u.username===user&&u.password===pass);
+    if(!u){authMsg('<div class="msg-err">Usuário ou senha incorretos.</div>');return;}
+    if(!u.approved){document.getElementById('auth').style.display='none';document.getElementById('pending').style.display='flex';document.getElementById('pending-user').textContent=u.username;return;}
+    loginAs(u);
+  } else {
+    const confirm=document.getElementById('inp-confirm').value;
+    if(pass!==confirm){authMsg('<div class="msg-err">Senhas não conferem.</div>');return;}
+    if(user===MASTER.username){authMsg('<div class="msg-err">Nome reservado.</div>');return;}
+    const users=getUsers();
+    if(users.find(u=>u.username===user)){authMsg('<div class="msg-err">Usuário já existe.</div>');return;}
+    saveUsers([...users,{username:user,password:pass,role:'user',approved:false}]);
+    authMsg('<div class="msg-ok">Cadastro enviado! Aguarde aprovação.</div>');switchAuthTab('login');
+  }
+}
+function loginAs(u){
+  currentUser=u;
+  document.getElementById('auth').style.display='none';
+  document.getElementById('app').style.display='flex';
+  document.getElementById('hdr-user').textContent='👤 '+u.username;
+  if(u.role==='master') document.getElementById('btn-approve').style.display='';
+  renderTabNav();renderContent();updateHeader();
+}
+function logout(){location.reload();}
+
+// ═══ MODAL USUÁRIOS ═══
+function openModal(){document.getElementById('modal').classList.add('open');renderModal();}
+function closeModal(){document.getElementById('modal').classList.remove('open');}
+function renderModal(){
+  const users=getUsers(),pending=users.filter(u=>!u.approved),approved=users.filter(u=>u.approved);
+  let h=`<div style="font-size:11px;font-weight:700;color:var(--warn);text-transform:uppercase;margin-bottom:8px">⏳ Pendentes (${pending.length})</div>`;
+  if(!pending.length) h+='<p style="color:var(--muted);font-size:12px;margin-bottom:14px">Nenhuma solicitação.</p>';
+  pending.forEach(u=>{h+=`<div style="background:#12151f;border-radius:8px;padding:9px 13px;margin-bottom:7px;display:flex;justify-content:space-between;align-items:center"><span style="font-weight:600">${u.username}</span><div style="display:flex;gap:7px"><button onclick="approveUser('${u.username}')" style="padding:5px 11px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">✓ Aprovar</button><button onclick="removeUser('${u.username}')" style="padding:5px 11px;background:#dc2626;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">✕</button></div></div>`;});
+  h+=`<div style="font-size:11px;font-weight:700;color:var(--success);text-transform:uppercase;margin:12px 0 8px">✓ Aprovados (${approved.length})</div>`;
+  approved.forEach(u=>{h+=`<div style="background:#12151f;border-radius:8px;padding:9px 13px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center"><span>${u.username}</span><button onclick="removeUser('${u.username}')" style="padding:4px 10px;background:#7f1d1d;color:#fca5a5;border:none;border-radius:6px;font-size:11px;cursor:pointer">Remover</button></div>`;});
+  document.getElementById('modal-body').innerHTML=h;
+}
+function approveUser(un){const u=getUsers().map(x=>x.username===un?{...x,approved:true}:x);saveUsers(u);renderModal();}
+function removeUser(un){saveUsers(getUsers().filter(x=>x.username!==un));renderModal();}
+
+// ═══ TABS ═══
+const TABS=[
+  {id:'capa',label:'🏠 Capa'},
+  {id:'geral',label:'📋 Geral'},
+  {id:'inspecao',label:'📅 Inspeção'},
+  {id:'vaso',label:'🏭 Vaso'},
+  {id:'relatorio',label:'📊 Relatório'},
+  {id:'acoes',label:'⚡ Ações'},
+  {id:'espessura',label:'📏 Espessura'},
+  {id:'memorial',label:'🔢 Cálculos'},
+  {id:'dispositivos',label:'🔧 Dispositivos'},
+  {id:'anexos',label:'📎 Anexos'},
+  {id:'gerar',label:'📄 Gerar'},
+];
+function renderTabNav(){
+  document.getElementById('tab-nav').innerHTML=TABS.map(t=>`<button class="${currentTab===t.id?'active':''}" onclick="switchTab('${t.id}')">${t.label}</button>`).join('');
+}
+function switchTab(id){currentTab=id;renderTabNav();renderContent();}
+function updateHeader(){
+  document.getElementById('hdr-meta').textContent=`VP ${formData.vp_numero} · ${formData.num_relatorio} · ${formData.cliente_nome.split(' ')[0]+' '+formData.cliente_nome.split(' ')[1]||''}`;
+}
+
+// ═══ FIELD HELPERS ═══
+function fld(label,key,cls='full',type='text'){
+  return `<div class="field-mb ${cls}"><label class="field-lbl">${label}</label><input class="field-inp" type="${type}" value="${(formData[key]||'').replace(/"/g,'&quot;')}" oninput="formData['${key}']=this.value;updateHeader()"/></div>`;
+}
+// Campo numérico para memoriais de cálculo: aceita vírgula/ponto livremente (inputmode decimal)
+// e atualiza os resultados (e calculado, espessura encontrada) sem re-renderizar o formulário inteiro,
+// evitando que o campo perca o foco/cursor durante a digitação.
+function memFld(label,key,cls='half'){
+  return `<div class="field-mb ${cls}"><label class="field-lbl">${label}</label><input class="field-inp" type="text" inputmode="decimal" value="${(formData[key]||'').replace(/"/g,'&quot;')}" oninput="formData['${key}']=this.value;updateMemorialResults()"/></div>`;
+}
+function fldSel(label,key,opts,cls='full'){
+  const o=opts.map(([v,l])=>`<option value="${v}" ${formData[key]===v?'selected':''}>${l}</option>`).join('');
+  return `<div class="field-mb ${cls}"><label class="field-lbl">${label}</label><select class="field-sel" onchange="formData['${key}']=this.value">${o}</select></div>`;
+}
+function cbGroup(title,key,items){
+  const boxes=items.map(([k,l])=>`<div class="cb-item ${checkboxes[key][k]?'checked':''}" onclick="toggleCB('${key}','${k}',this)"><div class="cb-dot">${checkboxes[key][k]?'✓':''}</div><span class="cb-label">${l}</span></div>`).join('');
+  return `<div class="cb-group"><div class="cb-group-title">${title}</div><div class="cb-row">${boxes}</div></div>`;
+}
+function toggleCB(group,key,el){
+  checkboxes[group][key]=!checkboxes[group][key];
+  el.classList.toggle('checked',checkboxes[group][key]);
+  el.querySelector('.cb-dot').textContent=checkboxes[group][key]?'✓':'';
+}
+</script>
+<script>
+// ═══ RENDER CONTENT ═══
+function renderContent(){
+  const el=document.getElementById('content');
+  const map={
+    capa:renderCapa,geral:renderGeral,inspecao:renderInspecao,vaso:renderVaso,
+    relatorio:renderRelatorio,acoes:renderAcoes,memorial:renderMemorial,
+    espessura:renderEspessura,dispositivos:renderDispositivos,
+    anexos:renderAnexos,gerar:renderGerar
+  };
+  el.innerHTML=(map[currentTab]||renderGeral)();
+}
+
+function renderCapa(){
+  return `<div class="sec-title">🏠 Capa do Relatório</div>
+  <div class="sec-sub">Dados que aparecem na primeira página do relatório.</div>
+
+  <div style="background:#12151f;border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px">
+    <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:2px">🏢 Logo do Cliente</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Aparece centralizada na capa (área com borda)</div>
+    ${renderSinglePhoto('imgEquip','Logo do Cliente')}
+  </div>
+
+  <div style="background:#12151f;border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px">
+    <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:2px">📷 Foto do Equipamento</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Aparece na Seção 2 do relatório — tire foto em tempo real ou selecione arquivo</div>
+    ${renderSinglePhoto('fotoEquip','Foto do Equipamento (Seção 2)')}
+  </div>
+
+  ${fld('Nome do Cliente','cliente_nome')}
+  ${fld('Endereço (Rua, Número, Bairro)','cliente_end')}
+  ${fld('Cidade / Estado / CEP','cliente_cidade')}
+  ${fld('CNPJ','cliente_cnpj','half')}
+  <div style="background:#12151f;border:1px solid var(--border);border-radius:10px;padding:12px;margin-top:6px">
+    <div style="font-size:11px;font-weight:700;color:var(--label);text-transform:uppercase;margin-bottom:10px">Título e Período</div>
+    <div class="row2">
+      ${fld('Título Principal (linha 1)','titulo_linha1','full')}
+      ${fld('Título Principal (linha 2)','titulo_linha2','full')}
+      ${fld('Mês/Ano Início','mes_ano_inicio','half')}
+      ${fld('Mês/Ano Fim','mes_ano_fim','half')}
+      ${fld('Descrição do Equipamento (linha 1)','equip_linha1','full')}
+      ${fld('Descrição do Equipamento (linha 2)','equip_linha2','full')}
+      ${fld('VP Nº','vp_numero','half')}
+      ${fld('Nº do Relatório','num_relatorio','half')}
+    </div>
+  </div>`;
+}
+
+function renderGeral(){
+  return `<div class="sec-title">📋 4. Informações Gerais</div>
+  <div class="row2">
+    ${fld('Cliente','cliente')}
+    ${fld('Identificação do Equipamento','identificacao')}
+    ${fld('Tag','tag','half')}
+    ${fld('Local','local','half')}
+    ${fld('Localização','localizacao')}
+  </div>`;
+}
+
+function renderInspecao(){
+  return `<div class="sec-title">📅 5. Dados de Inspeção</div>
+  ${fld('Formato / Tipo','formato_tipo')}
+  <div class="row2">
+    ${fld('Data Início','data_inicio','half')}
+    ${fld('Hora Inicial','hora_inicio','half')}
+    ${fld('Data Término','data_termino','half')}
+    ${fld('Hora Término','hora_termino','half')}
+  </div>
+  ${cbGroup('Característica da Inspeção','carac',[['interna','Interna'],['externa','Externa']])}
+  ${cbGroup('Tipo de Inspeção','tipo',[['ultrassom','Ultrassom'],['visual','Visual'],['liq_penetrante','Líquido Penetrante'],['videoscopia','Videoscopia'],['teste_hidro','Teste Hidrostático'],['part_magnetica','Partícula Magnética'],['metalografia','Metalografia'],['radiografia','Radiografia']])}
+  ${cbGroup('Evento de Inspeção','evento',[['inicial','Inicial'],['periodica','Periódica'],['extraordinaria','Extraordinária']])}`;
+}
+
+function renderVaso(){
+  // Conversão PMTA
+  const pmtaBar=parseFloat((formData.pmta_bar||'0').replace(',','.'));
+  const pmtaLbf=parseFloat((formData.pmta_lbf||'0').replace(',','.'));
+  const pmtaKgf=parseFloat((formData.pmta_kgf||'0').replace(',','.'));
+  const pmtaMpa=parseFloat((formData.pmta_mpa||'0').replace(',','.'));
+  // Conversão PH
+  const phBar=parseFloat((formData.ph_bar||'0').replace(',','.'));
+  const phLbf=parseFloat((formData.ph_lbf||'0').replace(',','.'));
+  const phKgf=parseFloat((formData.ph_kgf||'0').replace(',','.'));
+  const phMpa=parseFloat((formData.ph_mpa||'0').replace(',','.'));
+  // Cálculo P.V
+  const volM3=parseFloat((formData.volume_m3||'0').replace(',','.'));
+  const pv=pmtaMpa*volM3;
+  const pvFmt=isNaN(pv)||pv===0?'—':pv.toFixed(3).replace('.',',');
+  const pvMenor1=pv>0&&pv<1;
+  const pvStatus=pv===0?'—':pvMenor1?'P.V < 1 ✓':'P.V ≥ 1';
+  const pvColor=pv===0?'var(--muted)':pvMenor1?'var(--success)':'var(--warn)';
+  // Sugestão automática de categoria
+  let sugPR='5', sugClasse='C', sugCat='V';
+  if(pv>=100) sugPR='1';
+  else if(pv>=30) sugPR='2';
+  else if(pv>=2.5) sugPR='3';
+  else if(pv>=1) sugPR='4';
+  else sugPR='5';
+  // Classe baseada no tipo de fluido
+  const fluido=(formData.tipo_fluido||'').toLowerCase();
+  if(fluido.includes('ar comprimido')||fluido.includes('vapor')||fluido.includes('gas')) sugClasse='C';
+  else if(fluido.includes('combustível')||fluido.includes('tóxico')) sugClasse='B';
+  else sugClasse='C';
+  // Categoria pela tabela NR-13 (classe C)
+  const catMap={C:{1:'I',2:'II',3:'III',4:'IV',5:'V'},B:{1:'I',2:'II',3:'III',4:'IV',5:'IV'},A:{1:'I',2:'I',3:'II',4:'III',5:'III'},D:{1:'II',2:'III',3:'IV',4:'V',5:'V'}};
+  sugCat=(catMap[sugClasse]||catMap['C'])[parseInt(sugPR)]||'V';
+
+  const pressureField=(label,valKey,barKey,lbfKey,kgfKey,mpaKey,unitKey)=>`
+    <div class="field-mb full">
+      <label class="field-lbl">${label}</label>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <div style="position:relative;flex:1;min-width:90px">
+          <input class="field-inp" type="text" inputmode="decimal" value="${formData[valKey]||''}"
+            placeholder="ex: 13,30"
+            onchange="updatePressure('${valKey}','${barKey}','${lbfKey}','${kgfKey}','${mpaKey}','${unitKey}',this.value)"
+            style="padding-right:70px"/>
+          <select onchange="formData['${unitKey}']=this.value;recalcPressureFromUnit('${valKey}','${barKey}','${lbfKey}','${kgfKey}','${mpaKey}','${unitKey}')"
+            style="position:absolute;right:0;top:0;height:100%;background:#1e293b;border:none;border-left:1px solid var(--border);border-radius:0 8px 8px 0;color:var(--text);font-size:12px;padding:0 6px;cursor:pointer;outline:none">
+            ${['bar','lbf/pol²','kgf/cm²','MPa'].map(u=>`<option value="${u}" ${formData[unitKey]===u?'selected':''}>${u}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:5px">
+        ${[['bar',barKey],['lbf/pol²',lbfKey],['kgf/cm²',kgfKey],['MPa',mpaKey]].map(([u,k])=>`
+          <div style="background:#12151f;border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:11px;color:var(--label)">
+            <span style="color:var(--muted)">${u}:</span>
+            <span style="color:var(--text);font-weight:700">${formData[k]||'—'}</span>
+          </div>`).join('')}
+      </div>
+    </div>`;
+
+  return `<div class="sec-title">🏭 6. Identificação do Vaso de Pressão</div>
+  <div class="sec-sub">Dados de Placa e Categorização do Vaso</div>
+  <div class="row2">
+    ${fld('Fabricante','fabricante','half')}
+    ${fld('Modelo','modelo','half')}
+    ${fld('Ano de Fabricação','ano_fabricacao','half')}
+    ${fld('Nº de Série','num_serie','half')}
+    ${fld('Tag','tag_vaso','half')}
+    ${fld('Tipo de Fluido','tipo_fluido','half')}
+  </div>
+  <div class="row2">
+    <div class="field-mb half">
+      <label class="field-lbl">Volume Interno (Litros)</label>
+      <input class="field-inp" type="number" step="0.1" value="${formData.volume_litros||''}"
+        oninput="formData['volume_litros']=this.value;formData['volume_m3']=(parseFloat(this.value.replace(',','.'))/1000).toFixed(4).replace('.',',');calcPV();renderContent()"/>
+    </div>
+    <div class="field-mb half">
+      <label class="field-lbl">Volume em m³ (calculado)</label>
+      <input class="field-inp" value="${formData.volume_m3||''}" readonly style="background:#0a0d14;color:var(--success);font-weight:700"/>
+    </div>
+  </div>
+  ${pressureField('PMTA','pmta_val','pmta_bar','pmta_lbf','pmta_kgf','pmta_mpa','pmta_unidade')}
+  ${pressureField('Pressão de Teste Hidrostático','ph_val','ph_bar','ph_lbf','ph_kgf','ph_mpa','ph_unidade')}
+  <div class="row2">
+    ${fld('Código de Projeto','codigo_projeto','half')}
+    ${fld('Acessórios','acessorios','half')}
+    ${fld('Código Registro INMETRO','codigo_inmetro','half')}
+    ${fld('Tipo','tipo_vaso','half')}
+  </div>
+
+  <!-- CATEGORIZAÇÃO -->
+  <div style="background:#12151f;border:1px solid var(--border);border-radius:10px;padding:14px;margin-top:6px">
+    <div class="cb-group-title" style="margin-bottom:12px">📐 Categorização do Vaso</div>
+
+    <!-- P.V calculado -->
+    <div style="background:#0a1628;border:1.5px solid ${pvColor};border-radius:8px;padding:12px 14px;margin-bottom:14px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:10px;color:var(--label);font-weight:700;text-transform:uppercase;margin-bottom:2px">Cálculo P.V</div>
+        <div style="font-size:11px;color:var(--muted)">P (MPa) × V (m³)</div>
+        <div style="font-size:11px;color:var(--muted)">${pmtaMpa>0?pmtaMpa.toFixed(3):'?'} × ${volM3>0?volM3.toFixed(4):'?'}</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:24px;font-weight:900;color:${pvColor}">${pvFmt}</div>
+        <div style="font-size:11px;font-weight:700;color:${pvColor}">${pvStatus}</div>
+      </div>
+      ${pv>0?`<div style="margin-left:auto;background:#1e293b;border-radius:6px;padding:8px 12px;font-size:11px;color:var(--muted)">
+        Sugestão automática:<br/>
+        <span style="color:var(--text);font-weight:700">Risco: ${sugPR} · Classe: ${sugClasse} · Cat.: ${sugCat}</span><br/>
+        <button onclick="applySuggestion('${sugPR}','${sugClasse}','${sugCat}')"
+          style="margin-top:5px;padding:4px 12px;background:var(--accent);color:white;border:none;border-radius:5px;cursor:pointer;font-size:11px;font-weight:700">
+          ✓ Aplicar sugestão
+        </button>
+      </div>`:''}
+    </div>
+
+    <div class="row2">
+      ${fldSel('Potencial de Risco','potencial_risco',[['1','1 – Menor risco'],['2','2'],['3','3'],['4','4'],['5','5 – Maior risco']],'third')}
+      ${fldSel('Classe do Fluido','classe_fluido',[['A','A – Inflamáveis/Tóxicos ≥200°C'],['B','B – Combustíveis <200°C / Tóxicos'],['C','C – Vapor / Gases / Ar comprimido'],['D','D – Outro fluido']],'third')}
+      ${fldSel('Categoria','categoria',[['I','I'],['II','II'],['III','III'],['IV','IV'],['V','V']],'third')}
+    </div>
+  </div>`;
+}
+
+function renderRelatorio(){
+  let rows=itensInspecao.map((it,i)=>`<tr>
+    <td style="font-weight:600">${it.id}</td>
+    <td>${it.item}</td>
+    <td style="text-align:center">
+      <div style="display:flex;gap:4px;justify-content:center">
+        <button class="status-btn status-ap ${it.status==='AP'?'sel':''}" onclick="setStatus(${i},'AP',this)">AP</button>
+        <button class="status-btn status-ae ${it.status==='AE'?'sel':''}" onclick="setStatus(${i},'AE',this)">AE</button>
+        <button class="status-btn status-na ${it.status==='N/A'?'sel':''}" onclick="setStatus(${i},'N/A',this)">N/A</button>
+      </div>
+    </td>
+    <td><input style="width:100%;background:transparent;border:none;color:var(--text);font-size:11px;outline:none" value="${it.obs}" oninput="itensInspecao[${i}].obs=this.value" placeholder="observação..."/></td>
+  </tr>`).join('');
+  return `<div class="sec-title">📊 7. Relatório dos Dados de Inspeção</div>
+  <div class="sec-sub">Defina o status de cada item inspecionado.</div>
+  <div style="background:#0c1a2e;border:1px solid #1e40af;border-radius:8px;padding:10px 14px;margin-bottom:12px;display:flex;gap:16px;font-size:12px">
+    <span style="color:#4ade80;font-weight:700">■ AP</span> Aprovado sem Restrições &nbsp;
+    <span style="color:#fcd34d;font-weight:700">■ AE</span> Ações a Serem Executadas &nbsp;
+    <span style="color:var(--muted);font-weight:700">■ N/A</span> Não Aplicável
+  </div>
+  <div style="overflow-x:auto">
+  <table class="insp-table"><thead><tr><th style="width:48px">Item</th><th>Descrição</th><th style="width:130px">Status</th><th>Observações</th></tr></thead>
+  <tbody>${rows}</tbody></table></div>`;
+}
+function setStatus(i,s,btn){
+  itensInspecao[i].status=s;
+  const par=btn.parentElement;
+  par.querySelectorAll('.status-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+}
+
+function renderAcoes(){
+  let rows=acoesExec.map((a,i)=>`<tr>
+    <td><input style="width:100%;background:transparent;border:none;color:var(--text);font-size:12px;outline:none" value="${a.acao}" oninput="acoesExec[${i}].acao=this.value" placeholder="Descreva a ação..."/></td>
+    <td><input style="width:100%;background:transparent;border:none;color:var(--text);font-size:12px;outline:none" value="${a.prazo}" oninput="acoesExec[${i}].prazo=this.value" placeholder="dd/mm/aaaa"/></td>
+    <td><input style="width:100%;background:transparent;border:none;color:var(--text);font-size:12px;outline:none" value="${a.statusExec}" oninput="acoesExec[${i}].statusExec=this.value" placeholder="Em andamento..."/></td>
+    <td><input style="width:100%;background:transparent;border:none;color:var(--text);font-size:12px;outline:none" value="${a.resp}" oninput="acoesExec[${i}].resp=this.value" placeholder="Responsável..."/></td>
+    <td><button onclick="removeAcao(${i})" style="background:#7f1d1d;color:#fca5a5;border:none;border-radius:5px;padding:3px 8px;cursor:pointer;font-size:11px">×</button></td>
+  </tr>`).join('');
+  return `<div class="sec-title">⚡ 8. Ações a Serem Executadas</div>
+  <div style="overflow-x:auto"><table class="insp-table">
+    <thead><tr><th>Ações</th><th>Prazo</th><th>Status Execução</th><th>Responsável</th><th style="width:36px"></th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>
+  <button onclick="addAcao()" style="margin-top:10px;padding:8px 18px;background:#1e3a5f;color:#60a5fa;border:1px solid #1e40af;border-radius:7px;cursor:pointer;font-size:12px;font-weight:700">+ Adicionar Ação</button>`;
+}
+function addAcao(){acoesExec.push({acao:'',prazo:'',statusExec:'',resp:''});renderContent();}
+function removeAcao(i){if(acoesExec.length>1){acoesExec.splice(i,1);renderContent();}}
+
+function renderMemorial(){
+  // Valores calculados
+  const P=parseFloat((formData.mem_pressao_mpa||'0').replace(',','.'))||0;
+  const R=parseFloat((formData.mem_raio_mm||'0').replace(',','.'))||0;
+  const S=parseFloat((formData.mem_tensao||'0').replace(',','.'))||0;
+  const E=parseFloat((formData.mem_efic_costado||'0').replace(',','.'))||0;
+  const C=parseFloat((formData.mem_sobrec||'0').replace(',','.'))||0;
+  const eCostado=isFinite((P*R)/(S*E-0.6*P)+C)&&S*E-0.6*P>0?(P*R)/(S*E-0.6*P)+C:0;
+  const St=parseFloat((formData.mem_tensao_tampo||'0').replace(',','.'))||0;
+  const Et=parseFloat((formData.mem_efic_tampo||'0').replace(',','.'))||0;
+  const Ct=parseFloat((formData.mem_sobrec_tampo||'0').replace(',','.'))||0;
+  const eTampo=isFinite((P*R)/(St*Et-0.1*P)+Ct)&&St*Et-0.1*P>0?(P*R)/(St*Et-0.1*P)+Ct:0;
+
+  // Tabela completa de tipos de aço conforme ASME/ASTM
+  const steelTypes=[
+    {code:'— Selecione o tipo de aço —',          s:'',    desc:''},
+    {code:'SA 285 Grade C – ASTM 285 Grau C',      s:'108', desc:'108 MPa'},
+    {code:'SA 516 Grade 60 – ASTM 516 Grau 60',    s:'118', desc:'118 MPa'},
+    {code:'SA 516 Grade 70 – ASTM 516 Grau 70',    s:'138', desc:'138 MPa'},
+    {code:'SA A 36 – ASTM A 36',                   s:'114', desc:'114 MPa'},
+    {code:'SA 414 Grade A',                         s:'88.9',desc:'88,9 MPa'},
+    {code:'SA 414 Grade B',                         s:'98.6',desc:'98,6 MPa'},
+    {code:'SA 414 Grade C',                         s:'108', desc:'108 MPa'},
+    {code:'SA 414 Grade D',                         s:'118', desc:'118 MPa'},
+    {code:'SA 414 Grade E',                         s:'128', desc:'128 MPa'},
+    {code:'SA 414 Grade F',                         s:'138', desc:'138 MPa'},
+    {code:'SA A 178 Grade A – ASTM A 178 Grau A',  s:'78.6',desc:'78,6 MPa'},
+    {code:'Outro (inserir manualmente)',             s:'manual', desc:''},
+  ];
+  const isManualC = formData.mem_tensao_manual_c==='1';
+  const isManualT = formData.mem_tensao_manual_t==='1';
+
+  const steelSel=(key,tensaoKey,label,isManual,manualKey)=>`
+    <div class="field-mb full">
+      <label class="field-lbl">${label} — Tipo de Aço / Tensão Admissível S (MPa)</label>
+      <select class="field-sel" style="margin-bottom:8px"
+        onchange="selectSteel(this.value,'${tensaoKey}','${manualKey}')">
+        ${steelTypes.map(st=>`<option value="${st.s}"
+          ${(st.s!=='manual'&&formData[tensaoKey]===st.s&&!isManual)||(st.s==='manual'&&isManual)?'selected':''}>
+          ${st.code}${st.s&&st.s!=='manual'?' — '+st.s+' MPa':''}
+        </option>`).join('')}
+      </select>
+      ${isManual?`
+        <div class="field-mb full" style="margin-bottom:0">
+          <label class="field-lbl">S — Tensão Admissível (MPa) — inserir manualmente</label>
+          <input class="field-inp" type="text" inputmode="decimal"
+            value="${formData[tensaoKey]||''}"
+            placeholder="ex: 120,5"
+            oninput="formData['${tensaoKey}']=this.value;updateMemorialResults()"
+            style="font-weight:700;color:var(--accent)"/>
+        </div>`:`
+        <div style="background:#0a1628;border:1px solid #1e40af;border-radius:7px;padding:8px 12px;display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:11px;color:var(--label)">S selecionado:</span>
+          <span style="font-size:20px;font-weight:900;color:var(--accent)">${formData[tensaoKey]||'—'} MPa</span>
+        </div>`}
+    </div>`;
+
+  // Espessura encontrada — ultrassom (menor valor entre tampos) ou manual
+  const avgC=calcAvg(regions.costado);
+  const avgTD=calcAvg(regions.tampoDir);
+  const avgTE=calcAvg(regions.tampoEsq);
+  // Usa o MENOR valor entre os dois tampos (mais conservador)
+  const avgT=getMinTampoAvg();
+  const tLbl=getTampoLabels();
+  const espEncC=avgC!==null?avgC:parseFloat((formData.esp_enc_costado_manual||'').replace(',','.'))||0;
+  const espEncT=avgT!==null?avgT:parseFloat((formData.esp_enc_tampo_manual||'').replace(',','.'))||0;
+  const colorC=eCostado>0&&espEncC>0?(espEncC>=eCostado?'var(--success)':'var(--danger)'):'var(--muted)';
+  const colorT=eTampo>0&&espEncT>0?(espEncT>=eTampo?'var(--success)':'var(--danger)'):'var(--muted)';
+
+  const espEncBlock=(enc,minVal,color,hasUltrassom,manualKey,regionLabel)=>`
+    <div data-role="enc-box" style="background:#0a1628;border:1.5px solid ${color};border-radius:8px;padding:12px 14px;margin-top:8px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-size:10px;color:var(--label);font-weight:700;text-transform:uppercase;margin-bottom:3px">Espessura Encontrada — ${regionLabel}</div>
+          ${hasUltrassom
+            ?`<div style="font-size:10px;color:var(--muted)">📷 Média automática do ultrassom</div>`
+            :`<div style="font-size:10px;color:var(--warn);margin-bottom:5px">⚠ Sem fotos — insira manualmente:</div>
+              <input type="text" inputmode="decimal" value="${formData[manualKey]||''}" placeholder="ex: 4,87"
+                oninput="formData['${manualKey}']=this.value;updateMemorialResults()"
+                style="width:120px;padding:6px 9px;background:#12151f;border:1.5px solid ${color};border-radius:6px;font-size:15px;font-weight:700;color:${color};outline:none"/>`
+          }
+        </div>
+        <div style="text-align:right">
+          <div data-role="enc-val" style="font-size:26px;font-weight:900;color:${color}">${enc>0?enc.toFixed(2)+' mm':'—'}</div>
+          <div data-role="enc-status" style="font-size:11px;font-weight:700;color:${color};display:${minVal>0&&enc>0?'':'none'}">${minVal>0&&enc>0?(enc>=minVal?'✓ Dentro do limite':'⚠ Abaixo do mínimo calculado'):''}</div>
+        </div>
+      </div>
+    </div>`;
+
+  return `<div class="sec-title">🔢 9. Memoriais de Cálculos</div>
+  <div class="sec-sub">Fórmula ASME VIII Div. I · Pressão e Raio puxados dos dados do vaso · Espessura encontrada da média do ultrassom.</div>
+
+  <div class="calc-box">
+    <div class="calc-title">Memorial de Cálculo – Costado</div>
+    <div class="formula">e = (P·R) / (S·E – 0,6·P) + C</div>
+    <div class="row2">
+      ${memFld('Pressão (MPa) P','mem_pressao_mpa','half')}
+    </div>
+
+    <!-- RAIO INTERNO — bloco de cálculo -->
+    ${(()=>{
+      const raio=calcRaioInterno();
+      const metodo=formData.mem_raio_metodo||'diametro';
+      const eParede=parseFloat((formData.mem_espessura_parede||'').replace(',','.'))||0;
+      const hasEParede=eParede>0;
+      const btnStyle=(active)=>`flex:1;padding:8px 12px;border:1.5px solid ${active?'#3b82f6':'var(--border)'};background:${active?'#1e3a5f':'#12151f'};color:${active?'#60a5fa':'var(--muted)'};border-radius:8px;cursor:pointer;font-size:12px;font-weight:700`;
+      return `<div style="background:#0a1628;border:1.5px solid #1e40af;border-radius:10px;padding:14px;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:700;color:#93c5fd;text-transform:uppercase;margin-bottom:12px">📐 Raio Interno (R) — Método de cálculo</div>
+        <div style="display:flex;gap:8px;margin-bottom:14px">
+          <button onclick="formData.mem_raio_metodo='diametro';calcRaioInterno();renderContent()" style="${btnStyle(metodo==='diametro')}">📏 Diâmetro Externo</button>
+          <button onclick="formData.mem_raio_metodo='circunferencia';calcRaioInterno();renderContent()" style="${btnStyle(metodo==='circunferencia')}">⭕ Circunferência Externa</button>
+        </div>
+        <div class="row2">
+          ${metodo==='diametro'?`
+            <div class="field-mb half">
+              <label class="field-lbl">Diâmetro Externo (mm)</label>
+              <input class="field-inp" type="text" inputmode="decimal" value="${formData.mem_diam_ext_mm||''}" placeholder="ex: 551,36"
+                oninput="formData.mem_diam_ext_mm=this.value;updateRaioDisplay()"/>
+              <div style="font-size:10px;color:var(--muted);margin-top:3px">Medido ou informado manualmente</div>
+            </div>`:`
+            <div class="field-mb half">
+              <label class="field-lbl">Circunferência Externa (mm)</label>
+              <input class="field-inp" type="text" inputmode="decimal" value="${formData.mem_circunf_ext_mm||''}" placeholder="ex: 1732,5"
+                oninput="formData.mem_circunf_ext_mm=this.value;updateRaioDisplay()"/>
+              <div style="font-size:10px;color:var(--muted);margin-top:3px">Medida com fita métrica na superfície externa</div>
+            </div>`}
+          <div class="field-mb half">
+            <label class="field-lbl">Espessura da Parede (mm) — opcional</label>
+            <input class="field-inp" type="text" inputmode="decimal" value="${formData.mem_espessura_parede||''}" placeholder="ex: 4,87"
+              oninput="formData.mem_espessura_parede=this.value;updateRaioDisplay()"/>
+            <div style="font-size:10px;color:var(--muted);margin-top:3px">Se desconhecida, deixe em branco → R = ${metodo==='diametro'?'Dext':'Cext/2π'} ÷ 2</div>
+          </div>
+        </div>
+        <div id="raio-formula" style="font-size:10px;color:#93c5fd;font-style:italic;margin-bottom:10px;background:#12151f;border-radius:6px;padding:6px 10px">
+          ${metodo==='diametro'
+            ?(hasEParede?`R = (${formData.mem_diam_ext_mm||'?'} ÷ 2) − ${formData.mem_espessura_parede} = ${raio>0?raio.toFixed(2):'?'} mm`
+                        :`R = ${formData.mem_diam_ext_mm||'?'} ÷ 2 = ${raio>0?raio.toFixed(2):'?'} mm`)
+            :(hasEParede?`R = (${formData.mem_circunf_ext_mm||'?'} ÷ 2π) − ${formData.mem_espessura_parede} = ${raio>0?raio.toFixed(2):'?'} mm`
+                        :`R = ${formData.mem_circunf_ext_mm||'?'} ÷ 2π = ${raio>0?raio.toFixed(2):'?'} mm`)}
+        </div>
+        <div id="raio-result" style="display:flex;align-items:center;justify-content:space-between;background:#12151f;border:1.5px solid ${raio>0?'#3b82f6':'var(--border)'};border-radius:8px;padding:10px 14px">
+          <div>
+            <div style="font-size:10px;color:var(--label);font-weight:700;text-transform:uppercase">R — Raio Interno calculado</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px">Usado automaticamente na fórmula ASME</div>
+          </div>
+          <div id="raio-value" style="font-size:26px;font-weight:900;color:${raio>0?'#60a5fa':'var(--muted)'}">
+            ${raio>0?raio.toFixed(2)+' mm':'— mm'}
+          </div>
+        </div>
+      </div>`;
+    })()}
+
+    <div class="row2">
+      ${steelSel('costado','mem_tensao','Costado',isManualC,'mem_tensao_manual_c')}
+      ${memFld('Eficiência de Solda E','mem_efic_costado','half')}
+      ${memFld('Sobrecorrosão (mm) C','mem_sobrec','half')}
+    </div>
+    <div class="calc-result">
+      <div class="calc-result-lbl">Espessura Mínima Calculada – Costado</div>
+      <div class="calc-result-val" id="calc-result-costado">${eCostado>0?eCostado.toFixed(2)+' mm':'—'}</div>
+    </div>
+    <div id="esp-enc-costado">${espEncBlock(espEncC,eCostado,colorC,avgC!==null,'esp_enc_costado_manual','Costado')}</div>
+  </div>
+
+  <div class="calc-box">
+    <div class="calc-title">Memorial de Cálculo – Tampo (Calota)</div>
+    <div class="formula">e = (P·R) / (S·E – 0,1·P) + C</div>
+    <div class="row2">
+      ${steelSel('tampo','mem_tensao_tampo','Tampo',isManualT,'mem_tensao_manual_t')}
+      ${memFld('Eficiência de Solda E','mem_efic_tampo','half')}
+      ${memFld('Sobrecorrosão (mm) C','mem_sobrec_tampo','half')}
+    </div>
+    <div class="calc-result">
+      <div class="calc-result-lbl">Espessura Mínima Calculada – Tampo</div>
+      <div class="calc-result-val" id="calc-result-tampo">${eTampo>0?eTampo.toFixed(2)+' mm':'—'}</div>
+    </div>
+    <div id="esp-enc-tampo">${espEncBlock(espEncT,eTampo,colorT,avgT!==null,'esp_enc_tampo_manual',
+      `Tampo (${avgTD!==null&&avgTE!==null?(avgTD<=avgTE?tLbl.dir+' — menor valor':tLbl.esq+' — menor valor'):(avgTD!==null?tLbl.dir:tLbl.esq)})`
+    )}</div>
+  </div>
+
+  <div style="background:#12151f;border:1px solid var(--border);border-radius:10px;padding:14px">
+    <div class="cb-group-title" style="margin-bottom:10px">Dados do Instrumento Utilizado</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button onclick="formData.inst_reutilizar='1';renderContent()"
+        style="flex:1;padding:8px;border:1.5px solid ${formData.inst_reutilizar==='1'?'var(--accent)':'var(--border)'};background:${formData.inst_reutilizar==='1'?'#1e3a5f':'#12151f'};color:${formData.inst_reutilizar==='1'?'#60a5fa':'var(--muted)'};border-radius:8px;cursor:pointer;font-size:12px;font-weight:700">
+        ♻️ Manter do último trabalho
+      </button>
+      <button onclick="formData.inst_reutilizar='0';renderContent()"
+        style="flex:1;padding:8px;border:1.5px solid ${formData.inst_reutilizar==='0'?'var(--accent)':'var(--border)'};background:${formData.inst_reutilizar==='0'?'#1e3a5f':'#12151f'};color:${formData.inst_reutilizar==='0'?'#60a5fa':'var(--muted)'};border-radius:8px;cursor:pointer;font-size:12px;font-weight:700">
+        ✏️ Alterar instrumento
+      </button>
+    </div>
+    ${formData.inst_reutilizar==='1'?`
+      <div style="background:#0c1a2e;border:1px solid #1e40af;border-radius:8px;padding:10px 14px;font-size:12px;color:#93c5fd">
+        ✓ Usando dados do último trabalho: <b style="color:var(--text)">${formData.inst_fabricante} ${formData.inst_modelo} · Série: ${formData.inst_serie}</b>
+      </div>`:`
+      <div class="row2">
+        ${fld('Modelo','inst_modelo','half')} ${fld('Nº de Série','inst_serie','half')}
+        ${fld('Fabricante','inst_fabricante','half')} ${fld('Precisão','inst_precisao','half')}
+        ${fld('Faixa de Medição','inst_faixa','half')} ${fld('Sensor','inst_sensor','half')}
+        ${fld('Potência','inst_potencia','half')} ${fld('Corrente','inst_corrente','half')}
+      </div>`}
+    <div class="cb-group-title" style="margin-bottom:8px;margin-top:12px">Dados do Ensaio</div>
+    <div class="row2">
+      ${fld('Temperatura','ens_temp','half')} ${fld('Acoplante','ens_acoplante','half')}
+      ${fld('Bloco Calibração','ens_bloco','half')} ${fld('Norma de Ensaio','ens_norma','half')}
+      ${fld('Acabamento Superficial','ens_acabamento','half')} ${fld('Ajuste de Sensibilidade','ens_ajuste','half')}
+    </div>
+    <div class="cb-group-title" style="margin-bottom:8px;margin-top:12px">Materiais Normalizados</div>
+    <div class="row2">
+      <div class="field-mb full">
+        <label class="field-lbl">Costado e Tampos (conforme tipo de aço S selecionado)</label>
+        <input class="field-inp" value="${(()=>{
+          const s1=formData.mem_tensao||'';const s2=formData.mem_tensao_tampo||'';
+          const steelMap={'108':'ASME SA-285 Gr.C / SA-414 Gr.C','118':'ASME SA-516 Gr.60 / SA-414 Gr.D','138':'ASME SA-516 Gr.70 / SA-414 Gr.F','114':'ASME SA-36','88.9':'ASME SA-414 Gr.A','98.6':'ASME SA-414 Gr.B','128':'ASME SA-414 Gr.E','78.6':'ASME SA-178 Gr.A'};
+          return steelMap[s1]||steelMap[s2]||'ASME AS-36M / ASME AS-414M Gr.E';
+        })()||''}" readonly style="background:#0a0d14;color:var(--success);font-weight:600;font-size:12px"/>
+        <div style="font-size:10px;color:var(--muted);margin-top:3px">Preenchido automaticamente conforme tipo de aço selecionado na fórmula</div>
+      </div>
+      ${fld('Luvas, Tubos e Aberturas','mat_luvas','full')}
+    </div>
+    <div class="cb-group-title" style="margin-bottom:8px;margin-top:12px">📝 Seção 13 — Notas Técnicas (editável)</div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:10px">Pré-preenchidos conforme tipo de aço e dados do certificado. Edite se necessário.</div>
+    <div style="background:#0a1628;border:1px solid #1e40af;border-radius:8px;padding:12px;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:700;color:#93c5fd;margin-bottom:8px">1. MATERIAL UTILIZADO</div>
+      <div class="row2">
+        ${fld('1.1 Cilindro','nt1_cilindro','full')}
+        ${fld('1.2 Tampos','nt1_tampos','full')}
+        ${fld('1.3 Luvas, Tubos e/ou Bocais','nt1_luvas','full')}
+        ${fld('1.4 Pés','nt1_pes','half')}
+        ${fld('1.5 Base','nt1_base','half')}
+      </div>
+    </div>
+    <div style="background:#0a1628;border:1px solid #1e40af;border-radius:8px;padding:12px">
+      <div style="font-size:11px;font-weight:700;color:#93c5fd;margin-bottom:8px">2. ASPECTOS CONSTRUTIVOS</div>
+      <div class="row2">
+        ${fld('2.1 Solda Tampo','nt2_solda_tampo','full')}
+        ${fld('2.2 Solda Casco/Casco','nt2_solda_casco','full')}
+        ${fld('2.3 Solda Casco/Tampo','nt2_solda_casco_tampo','full')}
+      </div>
+    </div>
+  </div>`;
+}
+</script>
+<script>
+// ═══ ESPESSURA, DISPOSITIVOS, ANEXOS, GERAR ═══
+function renderEspessura(){
+  const tL=getTampoLabels();
+  return `<div class="sec-title">📏 10. Certificado de Medição de Espessura</div>
+  <div class="sec-sub">5 a 14 fotos por região · IA lê os valores automaticamente · Representativas destacadas.</div>
+  <div class="row2">
+    ${fld('Nº Certificado','num_certificado','half')} ${fld('Comprimento','comprimento','half')}
+    ${fld('Diâmetro','diametro','half')}
+  </div>
+  <div style="background:#12151f;border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:14px">
+    <div class="cb-group-title" style="margin-bottom:8px">Espessuras Mínimas Calculadas (mm)</div>
+    <div class="row2">
+      ${fld('Costado','esp_min_calc_costado','third')}
+      ${fld('Tampo '+tL.dir,'esp_min_calc_tampo_dir','third')}
+      ${fld('Tampo '+tL.esq,'esp_min_calc_tampo_esq','third')}
+    </div>
+  </div>
+  ${renderRegion('costado','🔵 Costado','#60a5fa',2)}
+  ${renderRegion('tampoDir',tL.icon1+' Tampo '+tL.dir,'#4ade80',1)}
+  ${renderRegion('tampoEsq',tL.icon2+' Tampo '+tL.esq,'#facc15',1)}
+  <div style="background:#12151f;border:1px solid var(--border);border-radius:10px;padding:12px;margin-top:4px">
+    <div class="cb-group-title" style="margin-bottom:8px">🔖 Placa de Identificação do Vaso (Página 13)</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <button onclick="formData.incluir_placa='1';renderContent()"
+        style="flex:1;padding:8px;border:1.5px solid ${formData.incluir_placa==='1'?'var(--accent)':'var(--border)'};background:${formData.incluir_placa==='1'?'#1e3a5f':'#12151f'};color:${formData.incluir_placa==='1'?'#60a5fa':'var(--muted)'};border-radius:8px;cursor:pointer;font-size:12px;font-weight:700">
+        ✓ Incluir foto da placa
+      </button>
+      <button onclick="formData.incluir_placa='0';renderContent()"
+        style="flex:1;padding:8px;border:1.5px solid ${formData.incluir_placa==='0'?'var(--accent)':'var(--border)'};background:${formData.incluir_placa==='0'?'#1e3a5f':'#12151f'};color:${formData.incluir_placa==='0'?'#60a5fa':'var(--muted)'};border-radius:8px;cursor:pointer;font-size:12px;font-weight:700">
+        ✕ Não incluir
+      </button>
+    </div>
+    ${formData.incluir_placa==='1'
+      ? renderSinglePhoto('placa','Foto da Placa')
+      : `<div style="font-size:11px;color:var(--muted)">Sem a placa, a página 13 mostrará apenas Válvula e Manômetro em fotos maiores, centralizadas.</div>`}
+  </div>
+  ${renderSummaryTable()}`;
+}
+
+function renderDispositivos(){
+  return `<div class="sec-title">🔧 11. Dispositivos de Segurança</div>
+  <div class="sec-sub">Fotos que aparecem nos registros fotográficos do relatório (Seção 11 / Página 13).</div>
+  ${renderSinglePhoto('manometro','⏲️ Manômetro calibrado')}
+  ${renderSinglePhoto('valvula','🔩 Válvula de Segurança calibrada')}
+
+  <div class="sec-title" style="margin-top:18px">📎 Certificados de Calibração (Anexos 15, 16 e 17)</div>
+  <div class="sec-sub">Envie o certificado em PDF ou imagem (JPG/PNG) — o app detecta automaticamente as páginas, igual à ART.</div>
+  ${renderMultiPageUploader('manometro','📄 Anexo 15 — Certificado de Calibração do Manômetro')}
+  ${renderMultiPageUploader('valvula','📄 Anexo 16 — Certificado de Calibração da Válvula de Segurança')}
+  ${renderMultiPageUploader('instrumento','📄 Anexo 17 — Certificado de Calibração do Instrumento Utilizado (Ultrassom)')}`;
+}
+
+// Uploader genérico de PDF/Imagem multi-página (usado nos anexos 15/16/17)
+function renderMultiPageUploader(key,title){
+  const pages=calibPages[key]||[];
+  const pgCount=pages.length;
+  let html=`<div style="background:#12151f;border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px">
+    <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:10px">${title}</div>`;
+  if(pgCount>0){
+    html+=`<div style="background:#0c1a2e;border:1px solid #1e40af;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:12px;color:#93c5fd;display:flex;align-items:center;gap:10px">
+      <span style="font-size:18px">✅</span>
+      <div><b>Carregado — ${pgCount} página${pgCount>1?'s':''}</b><br/>
+      <span style="color:var(--muted);font-size:11px">Cada página ocupará uma folha separada no relatório</span></div>
+      <button onclick="clearCalib('${key}')" style="margin-left:auto;padding:5px 12px;background:#7f1d1d;color:#fca5a5;border:none;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700">Remover</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-bottom:10px">
+      ${pages.map((p,i)=>`<div style="background:#1a1d27;border:1px solid var(--border);border-radius:8px;overflow:hidden;text-align:center">
+        <img src="${p.dataUrl}" style="width:100%;height:90px;object-fit:contain;background:#fff;display:block"/>
+        <div style="padding:4px;font-size:10px;color:var(--label)">Pág. ${p.pageNum}/${pgCount}</div>
+      </div>`).join('')}
+    </div>`;
+  } else {
+    html+=`<div style="background:#0a0d14;border:1.5px dashed var(--border);border-radius:10px;padding:16px;text-align:center;margin-bottom:10px;color:var(--muted);font-size:12px">
+      Nenhum certificado carregado ainda.
+    </div>`;
+  }
+  html+=`<div id="calib-loading-${key}" style="display:none" class="ocr-bar">⏳ Processando PDF... aguarde</div>
+  <div style="display:flex;gap:8px">
+    <button class="btn-file" onclick="document.getElementById('calib-pdf-${key}').click()" style="flex:1;padding:10px">📄 PDF</button>
+    <button class="btn-cam" onclick="document.getElementById('calib-img-${key}').click()" style="flex:1;padding:10px">🖼 Imagem(ns)</button>
+  </div>
+  <input type="file" id="calib-pdf-${key}" accept="application/pdf" style="display:none" onchange="handleCalibPdf('${key}',this.files[0])"/>
+  <input type="file" id="calib-img-${key}" accept="image/*" multiple style="display:none" onchange="handleCalibImages('${key}',this.files)"/>
+  </div>`;
+  return html;
+}
+
+function renderAnexos(){
+  const pgCount=artPages.length;
+  let artHtml='';
+  if(pgCount>0){
+    artHtml+=`<div style="background:#0c1a2e;border:1px solid #1e40af;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:12px;color:#93c5fd;display:flex;align-items:center;gap:10px">
+      <span style="font-size:18px">✅</span>
+      <div><b>ART carregada — ${pgCount} página${pgCount>1?'s':''} detectada${pgCount>1?'s':''}</b><br/>
+      <span style="color:var(--muted);font-size:11px">Cada página ocupará uma folha separada no relatório</span></div>
+      <button onclick="clearART()" style="margin-left:auto;padding:5px 12px;background:#7f1d1d;color:#fca5a5;border:none;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700">Remover</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:12px">
+      ${artPages.map((p,i)=>`<div style="background:#12151f;border:1px solid var(--border);border-radius:8px;overflow:hidden;text-align:center">
+        <img src="${p.dataUrl}" style="width:100%;height:110px;object-fit:contain;background:#fff;display:block"/>
+        <div style="padding:5px;font-size:10px;color:var(--label)">Página ${p.pageNum} de ${pgCount}</div>
+      </div>`).join('')}
+    </div>`;
+  } else {
+    artHtml+=`<div style="background:#12151f;border:1.5px dashed var(--border);border-radius:10px;padding:20px;text-align:center;margin-bottom:12px;color:var(--muted);font-size:12px">
+      Nenhum arquivo carregado ainda.
+    </div>`;
+  }
+  artHtml+=`<div id="art-loading" style="display:none" class="ocr-bar">⏳ Processando PDF... aguarde</div>
+  <div style="display:flex;gap:8px;margin-bottom:5px">
+    <button class="btn-file" onclick="document.getElementById('art-pdf-inp').click()" style="flex:1;padding:10px">📄 PDF da ART</button>
+    <button class="btn-cam" onclick="document.getElementById('art-img-inp').click()" style="flex:1;padding:10px">🖼 Imagem(ns)</button>
+  </div>
+  <p style="font-size:10px;color:var(--muted);text-align:center;margin-top:4px">PDF: detecta páginas automaticamente · Imagem: adiciona como página individual</p>
+  <input type="file" id="art-pdf-inp" accept="application/pdf" style="display:none" onchange="handleARTPdf(this.files[0])"/>
+  <input type="file" id="art-img-inp" accept="image/*" multiple style="display:none" onchange="handleARTImages(this.files)"/>`;
+
+  return `<div class="sec-title">📎 Anexos e Documentos</div>
+  <div class="sec-sub">A ART é inserida como PDF — o app detecta automaticamente o número de páginas.</div>
+  <div style="background:#12151f;border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:16px">
+    <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:12px">📄 Seção 1 — ART Referente à Obra/Serviço</div>
+    ${artHtml}
+  </div>
+  ${renderSinglePhoto('art_comprov','💰 Anexo 4 — Comprovante de Pagamento A.R.T')}`;
+}
+
+function renderGerar(){
+  const avgC=calcAvg(regions.costado),avgD=calcAvg(regions.tampoDir),avgE=calcAvg(regions.tampoEsq);
+  const pct=Math.round([
+    formData.cliente?1:0,formData.data_inicio?1:0,formData.fabricante?1:0,
+    regions.costado.length>=5?1:0,regions.tampoDir.length>=5?1:0,regions.tampoEsq.length>=5?1:0,
+    extras.manometro?1:0,extras.valvula?1:0,artPages.length>0?1:0,extras.imgEquip?1:0,
+  ].reduce((a,b)=>a+b,0)/10*100);
+  const rows=[
+    ['VP',formData.vp_numero],['Relatório',formData.num_relatorio],
+    ['Cliente',(formData.cliente_nome||'').substring(0,30)+'...'],
+    ['Período',`${formData.data_inicio} → ${formData.data_termino}`],
+    ['Costado',avgC!==null?`${avgC.toFixed(2)} mm (${regions.costado.length} fotos)`:'Sem fotos'],
+    ['Tampo Dir.',avgD!==null?`${avgD.toFixed(2)} mm (${regions.tampoDir.length} fotos)`:'Sem fotos'],
+    ['Tampo Esq.',avgE!==null?`${avgE.toFixed(2)} mm (${regions.tampoEsq.length} fotos)`:'Sem fotos'],
+    ['Manômetro',extras.manometro?'✓':'—'],['Válvula',extras.valvula?'✓':'—'],
+    ['ART',artPages.length>0?`✓ ${artPages.length} página${artPages.length>1?'s':''}  carregada${artPages.length>1?'s':''}`:'—'],
+  ];
+  return `<div class="sec-title">📄 Gerar Documento</div>
+  <div class="gen-summary">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:11px;color:#93c5fd;font-weight:700;text-transform:uppercase">Resumo do Laudo</div>
+      <div style="font-size:13px;font-weight:800;color:${pct>=80?'var(--success)':pct>=50?'var(--warn)':'var(--danger)'}">${pct}% completo</div>
+    </div>
+    <div style="background:var(--border);border-radius:4px;height:6px;margin-bottom:14px"><div style="background:${pct>=80?'var(--success)':pct>=50?'var(--warn)':'var(--danger)'};height:6px;border-radius:4px;width:${pct}%;transition:width .3s"></div></div>
+    ${rows.map(([k,v])=>`<div class="gen-row"><span style="color:var(--muted)">${k}</span><span style="font-weight:600">${v}</span></div>`).join('')}
+  </div>
+
+  <!-- CAMPOS DA CONCLUSÃO -->
+  <div style="background:#12151f;border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px">
+    <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:12px">✅ Dados da Conclusão (Página 16)</div>
+
+    <!-- Pressão de Operação com 3 unidades -->
+    <div class="field-mb full">
+      <label class="field-lbl">Pressão de Operação</label>
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+        <div style="position:relative;flex:1;min-width:90px">
+          <input class="field-inp" type="text" inputmode="decimal"
+            value="${formData.pressao_operacao_val||''}"
+            placeholder="ex: 12,07"
+            onchange="formData.pressao_operacao_val=this.value;updatePressaoOp(this.value)"
+            style="padding-right:70px"/>
+          <select onchange="formData.pressao_operacao_unidade=this.value;updatePressaoOpUnit()"
+            style="position:absolute;right:0;top:0;height:100%;background:#1e293b;border:none;border-left:1px solid var(--border);border-radius:0 8px 8px 0;color:var(--text);font-size:12px;padding:0 6px;cursor:pointer;outline:none">
+            ${['bar','lbf/pol²','kgf/cm²'].map(u=>`<option value="${u}" ${formData.pressao_operacao_unidade===u?'selected':''}>${u}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <!-- Conversões em destaque -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${[['Bar',formData.pressao_operacao_bar],['Psi (lbf/pol²)',formData.pressao_operacao_psi],['kgf/cm²',formData.pressao_operacao_kgf]].map(([u,v])=>`
+          <div style="background:#0a1628;border:1.5px solid #C81F25;border-radius:7px;padding:5px 12px;text-align:center">
+            <div style="font-size:9px;color:#94a3b8;font-weight:700;text-transform:uppercase">${u}</div>
+            <div style="font-size:16px;font-weight:900;color:#C81F25">${v||'—'}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="row2">
+      ${fld('Calibração manômetro e válvula segurança','data_calib_manval','half')}
+      ${fld('Próxima inspeção externa','data_prox_insp_ext','half')}
+      ${fld('Próxima inspeção interna','data_prox_insp_int','half')}
+    </div>
+  </div>
+
+  <!-- Aviso CORS se aberto via file:// -->
+  ${window.location.protocol==='file:'?`
+  <div style="background:#1c0a00;border:2px solid #f97316;border-radius:10px;padding:12px 14px;margin-bottom:14px">
+    <div style="font-size:12px;font-weight:700;color:#f97316;margin-bottom:6px">⚠ OCR não funciona quando o arquivo é aberto diretamente do disco</div>
+    <div style="font-size:11px;color:#fed7aa;line-height:1.7">
+      O browser bloqueia chamadas à API (CORS) quando a URL começa com <b>file://</b>.<br/>
+      Para usar o OCR, abra o arquivo via servidor local:<br/>
+      <span style="background:#0f172a;display:inline-block;padding:4px 10px;border-radius:5px;font-family:monospace;font-size:11px;margin:4px 0;color:#86efac">
+        1) Abra o Prompt de Comando na pasta do arquivo<br/>
+        2) Execute: <b>python -m http.server 8080</b><br/>
+        3) No browser acesse: <b>http://localhost:8080/Laudo-VP-NR13.html</b>
+      </span><br/>
+      <span style="color:#94a3b8;font-size:10px">Alternativa: insira os valores manualmente na aba <b>Espessura</b> (campo abaixo de cada foto).</span>
+    </div>
+  </div>`:''}
+
+  <!-- Chave API Claude (OCR de fotos) -->
+  <div style="background:#0f1a2e;border:1px solid #1e40af;border-radius:10px;padding:12px 14px;margin-bottom:14px">
+    <div style="font-size:11px;font-weight:700;color:#60a5fa;margin-bottom:6px">🔑 Chave API Claude (necessária para OCR das fotos de ultrassom)</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <input id="api-key-inp" type="password" class="field-inp" style="flex:1;font-family:monospace;font-size:11px"
+        value="${getApiKey()}"
+        placeholder="sk-ant-api03-..."
+        onchange="saveApiKey(this.value);renderContent()"/>
+      <button onclick="saveApiKey(document.getElementById('api-key-inp').value);renderContent()"
+        style="padding:8px 14px;background:#1e40af;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer">Salvar</button>
+    </div>
+    <div style="font-size:10px;color:${getApiKey()?'#4ade80':'#f97316'};margin-top:5px">
+      ${getApiKey()?'✓ Chave configurada':'⚠ Sem chave API'}
+      ${window.location.protocol==='file:'?' · <span style="color:#f97316">OCR desabilitado (file://)</span>':' · OCR ativo'}
+    </div>
+  </div>
+
+  ${(regions.costado.length+regions.tampoDir.length+regions.tampoEsq.length)>0?`
+  <div style="background:#0d1f12;border:1px solid #166534;border-radius:10px;padding:12px 14px;margin-bottom:14px">
+    <div style="font-size:11px;font-weight:700;color:#4ade80;margin-bottom:8px">📷 Fotos carregadas — clique para ler os valores com OCR</div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px">
+      ${[['Costado',calcAvg(regions.costado),regions.costado.length],['Tampo Dir.',calcAvg(regions.tampoDir),regions.tampoDir.length],['Tampo Esq.',calcAvg(regions.tampoEsq),regions.tampoEsq.length]].map(([lbl,avg,n])=>`
+        <div style="background:#0a1628;border:1.5px solid ${avg!==null?'#166534':'#374151'};border-radius:7px;padding:5px 14px;text-align:center">
+          <div style="font-size:9px;color:#94a3b8;font-weight:700">${lbl} (${n} foto${n!==1?'s':''})</div>
+          <div style="font-size:15px;font-weight:900;color:${avg!==null?'#4ade80':'#f97316'}">${avg!==null?avg.toFixed(2)+' mm':'—'}</div>
+        </div>`).join('')}
+    </div>
+    <button id="btn-scan" onclick="rescanAllPhotos()"
+      style="width:100%;padding:9px;background:#166534;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">
+      🔍 Ler fotos com OCR
+    </button>
+  </div>`:''}
+
+  <div id="gen-msg"></div>
+  <div class="gen-btns">
+    <button class="btn-word" id="btn-word" onclick="doGenerate('docx')">📝 Word (.doc)</button>
+    <button class="btn-pdf" id="btn-pdf" onclick="doGenerate('pdf')">📄 PDF</button>
+    <button class="btn-qr" id="btn-qr" onclick="showQR()">📱 QR Code</button>
+  </div>
+  <p class="gen-note">Word: baixa .doc · PDF: abre para imprimir/salvar · QR: compartilha resumo</p>`;
+}
+
+// ═══ PHOTO HELPERS ═══
+function calcAvg(photos){const nums=(photos||[]).map(p=>p.value).filter(v=>v!==null&&!isNaN(v));return nums.length>0?nums.reduce((a,b)=>a+b,0)/nums.length:null;}
+function closestToAvg(photos,n){const valid=photos.filter(p=>p.value!==null&&!isNaN(p.value));if(!valid.length)return photos.slice(0,n);const avg=calcAvg(photos);return [...valid].sort((a,b)=>Math.abs(a.value-avg)-Math.abs(b.value-avg)).slice(0,n);}
+
+// Nomenclatura dos tampos conforme orientação do vaso
+function getTampoLabels(){
+  const tipo=(formData.tipo_vaso||'').toLowerCase();
+  const isVertical=tipo.includes('vertical');
+  return {
+    dir: isVertical?'Superior':'Direito',
+    esq: isVertical?'Inferior':'Esquerdo',
+    dirKey: isVertical?'Superior':'Direito',
+    esqKey: isVertical?'Inferior':'Esquerdo',
+    icon1: isVertical?'🔼':'🟢',
+    icon2: isVertical?'🔽':'🟡',
+  };
+}
+
+// Retorna o menor valor médio entre os dois tampos (mais conservador)
+function getMinTampoAvg(){
+  const avgD=calcAvg(regions.tampoDir);
+  const avgE=calcAvg(regions.tampoEsq);
+  if(avgD===null&&avgE===null) return null;
+  if(avgD===null) return avgE;
+  if(avgE===null) return avgD;
+  return Math.min(avgD,avgE);
+}
+function fileToDataUrl(f){return new Promise((r,j)=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.onerror=j;fr.readAsDataURL(f);});}
+
+function renderRegion(key,label,color,repCount){
+  const photos=regions[key]||[],avg=calcAvg(photos),featured=closestToAvg(photos,repCount),canAdd=photos.length<14;
+  let h=`<div class="photo-region"><div class="region-header"><div><div class="region-title" style="color:${color}">${label}</div><div class="region-count">${photos.length}/14 fotos · mínimo 5</div></div>`;
+  if(avg!==null) h+=`<div class="avg-badge" style="border-color:${color}"><div class="avg-lbl">Média encontrada</div><div class="avg-val" style="color:${color}">${avg.toFixed(2)} mm</div><div class="avg-sub">${photos.filter(p=>p.value!==null).length} leituras</div></div>`;
+  h+=`</div>`;
+  if(featured.length>0&&avg!==null){
+    h+=`<div style="margin-bottom:8px"><div style="font-size:10px;font-weight:700;color:var(--label);text-transform:uppercase;margin-bottom:6px">📌 Representativas (mais próximas da média)</div><div class="featured-grid">`;
+    featured.forEach(p=>{h+=`<div class="featured-item" style="border:1.5px solid ${color}"><img src="${p.url}" style="width:100%;height:100px;object-fit:cover;display:block"/><div class="feat-info"><div class="feat-val" style="color:${color}">${p.value} mm</div><div class="feat-delta">Δ ${Math.abs(p.value-avg).toFixed(2)} da média</div></div></div>`;});
+    h+=`</div></div>`;
+  }
+  if(photos.length>0){
+    h+=`<div class="photo-grid">`;
+    photos.forEach((p,i)=>{const isFeat=featured.some(f=>f.url===p.url);h+=`<div class="photo-cell ${isFeat?'is-feat':''}">${isFeat?'<div class="feat-star">★</div>':''}<img src="${p.url}"/><button class="edit-btn" onclick="openPhotoEdit('${key}',${i})" title="Rotacionar/Cortar">✏️</button><button class="del-btn" onclick="removePhoto('${key}',${i})">×</button><div class="photo-status ok">✓ Carregada</div><input type="text" value="${p.value!==null?p.value:''}" placeholder="mm" style="border-top-color:${p.value!==null?'#16a34a':'#dc2626'};color:${p.value!==null?'var(--success)':'var(--danger)'}" oninput="setPhotoValue('${key}',${i},this.value)"/></div>`;});
+    h+=`</div>`;
+  }
+  if(photos.length>0&&photos.length<5) h+=`<div class="warn-bar">⚠️ Adicione mais ${5-photos.length} foto(s) (mínimo 5).</div>`;
+  h+=`<div id="ocr-${key}" style="display:none" class="ocr-bar">🔍 <span id="ocr-txt-${key}"></span></div>`;
+  if(canAdd) h+=`<div class="add-btns"><button class="btn-file" onclick="triggerFile('${key}')">🖼 Arquivo</button><button class="btn-cam" onclick="triggerCam('${key}')">📷 Câmera</button></div>`;
+  else h+=`<div style="text-align:center;font-size:11px;color:var(--muted);padding:6px">Limite de 14 fotos atingido.</div>`;
+  h+=`<input type="file" id="file-${key}" accept="image/*" multiple style="display:none" onchange="handleFiles('${key}',this.files)"/>
+  <input type="file" id="cam-${key}" accept="image/*" capture="environment" style="display:none" onchange="handleFiles('${key}',this.files)"/></div>`;
+  return h;
+}
+
+function renderSinglePhoto(key,label){
+  const p=extras[key];
+  return `<div class="single-photo"><div class="sp-title">${label}</div>
+    ${p?`<div class="sp-preview"><img src="${p.url}"/><button class="sp-edit" onclick="openPhotoEditExtra('${key}')" title="Rotacionar/Cortar">✏️</button><button class="sp-del" onclick="clearExtra('${key}')">×</button></div><div class="photo-status ok" style="border-radius:6px;margin-bottom:8px">✓ Carregada — ${p.name}</div>`
+    :`<div class="sp-empty">Nenhuma foto selecionada</div>`}
+    <div class="add-btns">
+      <button class="btn-file" onclick="document.getElementById('ef-${key}').click()">🖼 Arquivo</button>
+      <button class="btn-cam" onclick="document.getElementById('ec-${key}').click()">📷 Câmera</button>
+    </div>
+    <input type="file" id="ef-${key}" accept="image/*" style="display:none" onchange="handleExtra('${key}',this.files[0])"/>
+    <input type="file" id="ec-${key}" accept="image/*" capture="environment" style="display:none" onchange="handleExtra('${key}',this.files[0])"/>
+  </div>`;
+}
+
+function updatePressaoOp(rawVal){
+  const v=parseFloat(rawVal.replace(',','.'));
+  formData.pressao_operacao_val=rawVal;
+  if(isNaN(v)) return;
+  const unit=formData.pressao_operacao_unidade||'bar';
+  const fac=CONV[unit]||CONV['bar'];
+  formData.pressao_operacao_bar=fmt2(v*fac['bar']);
+  formData.pressao_operacao_psi=fmt2(v*fac['lbf/pol²']);
+  formData.pressao_operacao_kgf=fmt2(v*fac['kgf/cm²']);
+  renderContent();
+}
+function updatePressaoOpUnit(){
+  updatePressaoOp(formData.pressao_operacao_val||'0');
+}
+
+function calcRaioInterno(){
+  const metodo=formData.mem_raio_metodo||'diametro';
+  let raio=0;
+  if(metodo==='diametro'){
+    // R interno = (Diâmetro Externo / 2) - Espessura da parede
+    const dExt=parseFloat((formData.mem_diam_ext_mm||'').replace(',','.'))||0;
+    const eParede=parseFloat((formData.mem_espessura_parede||'').replace(',','.'))||0;
+    if(dExt>0){
+      raio = eParede>0 ? (dExt/2)-eParede : dExt/2;
+    }
+  } else {
+    // R interno = (Circunferência Externa / 2π) - Espessura da parede
+    const circ=parseFloat((formData.mem_circunf_ext_mm||'').replace(',','.'))||0;
+    const eParede=parseFloat((formData.mem_espessura_parede||'').replace(',','.'))||0;
+    if(circ>0){
+      const rExt=circ/(2*Math.PI);
+      raio = eParede>0 ? rExt-eParede : rExt;
+    }
+  }
+  if(raio>0){
+    formData.mem_raio_mm=raio.toFixed(2).replace('.',',');
+  }
+  return raio;
+}
+
+// Atualiza apenas o resultado do raio (fórmula + valor) sem re-renderizar o formulário inteiro,
+// para não perder o foco/cursor enquanto o usuário digita números com vírgula/ponto.
+function updateRaioDisplay(){
+  const raio=calcRaioInterno();
+  const metodo=formData.mem_raio_metodo||'diametro';
+  const eParede=parseFloat((formData.mem_espessura_parede||'').replace(',','.'))||0;
+  const hasEParede=eParede>0;
+  const formulaEl=document.getElementById('raio-formula');
+  const valueEl=document.getElementById('raio-value');
+  const resultEl=document.getElementById('raio-result');
+  if(formulaEl){
+    formulaEl.textContent=metodo==='diametro'
+      ?(hasEParede?`R = (${formData.mem_diam_ext_mm||'?'} ÷ 2) − ${formData.mem_espessura_parede} = ${raio>0?raio.toFixed(2):'?'} mm`
+                  :`R = ${formData.mem_diam_ext_mm||'?'} ÷ 2 = ${raio>0?raio.toFixed(2):'?'} mm`)
+      :(hasEParede?`R = (${formData.mem_circunf_ext_mm||'?'} ÷ 2π) − ${formData.mem_espessura_parede} = ${raio>0?raio.toFixed(2):'?'} mm`
+                  :`R = ${formData.mem_circunf_ext_mm||'?'} ÷ 2π = ${raio>0?raio.toFixed(2):'?'} mm`);
+  }
+  if(valueEl){
+    valueEl.textContent=raio>0?raio.toFixed(2)+' mm':'— mm';
+    valueEl.style.color=raio>0?'#60a5fa':'var(--muted)';
+  }
+  if(resultEl){
+    resultEl.style.borderColor=raio>0?'#3b82f6':'var(--border)';
+  }
+  // A espessura mínima calculada (e) depende de R; atualiza o resultado do memorial sem re-render completo
+  updateMemorialResults();
+}
+
+// Recalcula e e espessura encontrada (Costado/Tampo) e atualiza apenas os elementos
+// de resultado no DOM, sem re-renderizar o formulário inteiro (preserva foco/cursor).
+function updateMemorialResults(){
+  const P=parseFloat((formData.mem_pressao_mpa||'0').replace(',','.'))||0;
+  const R=parseFloat((formData.mem_raio_mm||'0').replace(',','.'))||0;
+  const S=parseFloat((formData.mem_tensao||'0').replace(',','.'))||0;
+  const E=parseFloat((formData.mem_efic_costado||'0').replace(',','.'))||0;
+  const C=parseFloat((formData.mem_sobrec||'0').replace(',','.'))||0;
+  const eCostado=isFinite((P*R)/(S*E-0.6*P)+C)&&S*E-0.6*P>0?(P*R)/(S*E-0.6*P)+C:0;
+  const St=parseFloat((formData.mem_tensao_tampo||'0').replace(',','.'))||0;
+  const Et=parseFloat((formData.mem_efic_tampo||'0').replace(',','.'))||0;
+  const Ct=parseFloat((formData.mem_sobrec_tampo||'0').replace(',','.'))||0;
+  const eTampo=isFinite((P*R)/(St*Et-0.1*P)+Ct)&&St*Et-0.1*P>0?(P*R)/(St*Et-0.1*P)+Ct:0;
+
+  const avgC=calcAvg(regions.costado);
+  const avgT=getMinTampoAvg();
+  const espEncC=avgC!==null?avgC:parseFloat((formData.esp_enc_costado_manual||'').replace(',','.'))||0;
+  const espEncT=avgT!==null?avgT:parseFloat((formData.esp_enc_tampo_manual||'').replace(',','.'))||0;
+
+  const rC=document.getElementById('calc-result-costado');
+  if(rC) rC.textContent=eCostado>0?eCostado.toFixed(2)+' mm':'—';
+  const rT=document.getElementById('calc-result-tampo');
+  if(rT) rT.textContent=eTampo>0?eTampo.toFixed(2)+' mm':'—';
+
+  // Atualiza cor/status dentro dos blocos de espessura encontrada (valor + comparação)
+  const updateEspBlock=(blockId,enc,minVal)=>{
+    const block=document.getElementById(blockId);
+    if(!block) return;
+    const ok=minVal>0&&enc>0?enc>=minVal:null;
+    const color=ok===true?'var(--success)':ok===false?'var(--danger)':'var(--muted)';
+    const valEl=block.querySelector('[data-role="enc-val"]');
+    const statusEl=block.querySelector('[data-role="enc-status"]');
+    const outerEl=block.querySelector('[data-role="enc-box"]');
+    if(valEl){valEl.textContent=enc>0?enc.toFixed(2)+' mm':'—';valEl.style.color=color;}
+    if(outerEl) outerEl.style.borderColor=color;
+    if(statusEl){
+      if(minVal>0&&enc>0){
+        statusEl.style.display='';
+        statusEl.style.color=color;
+        statusEl.textContent=enc>=minVal?'✓ Dentro do limite':'⚠ Abaixo do mínimo calculado';
+      } else statusEl.style.display='none';
+    }
+  };
+  updateEspBlock('esp-enc-costado',espEncC,eCostado);
+  updateEspBlock('esp-enc-tampo',espEncT,eTampo);
+}
+
+function selectSteel(val,tensaoKey,manualFlagKey){
+  if(val==='manual'){
+    formData[manualFlagKey]='1';
+    formData[tensaoKey]='';
+  } else {
+    formData[manualFlagKey]='0';
+    if(val!=='') formData[tensaoKey]=val;
+  }
+  renderContent();
+}
+
+function renderSummaryTable(){
+  const avgC=calcAvg(regions.costado),avgD=calcAvg(regions.tampoDir),avgE=calcAvg(regions.tampoEsq);
+  if(avgC===null&&avgD===null&&avgE===null) return '';
+  const tL=getTampoLabels();
+  const avgTmin=getMinTampoAvg();
+  // Qual tampo tem o menor valor medido? Usa o limite calculado correspondente a esse tampo
+  const dirIsMenor=avgD!==null&&avgE!==null?(avgD<=avgE):(avgD!==null);
+  const minTampoLabel=dirIsMenor?'Tampo '+tL.dir:'Tampo '+tL.esq;
+  const minTampoCalc=dirIsMenor?formData.esp_min_calc_tampo_dir:formData.esp_min_calc_tampo_esq;
+  const rows=[
+    {l:'Costado',c:formData.esp_min_calc_costado,a:avgC,n:regions.costado.length,note:''},
+    {l:'Tampo '+tL.dir,c:formData.esp_min_calc_tampo_dir,a:avgD,n:regions.tampoDir.length,note:''},
+    {l:'Tampo '+tL.esq,c:formData.esp_min_calc_tampo_esq,a:avgE,n:regions.tampoEsq.length,note:''},
+    {l:'Tampo (menor)',c:minTampoCalc,a:avgTmin,n:(regions.tampoDir.length+regions.tampoEsq.length),note:'⬇ usado no cálculo'},
+  ];
+  let h=`<div style="background:#0c1a2e;border:1px solid #1e40af;border-radius:10px;padding:12px;margin-top:4px">
+    <div style="font-size:11px;font-weight:700;color:#93c5fd;text-transform:uppercase;margin-bottom:8px">Resumo das Médias</div>
+    <table class="summary-table"><thead><tr>${['Região','Mín. Calc.','Média Enc.','Fotos','Status'].map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>`;
+  rows.forEach((r,i)=>{
+    const calc=parseFloat((r.c||'').replace(',','.'));
+    const ok=r.a!==null&&!isNaN(calc)?r.a>=calc:null;
+    const espColor=ok===true?'var(--success)':ok===false?'var(--danger)':'#60a5fa';
+    const isMenor=i===3;
+    h+=`<tr style="${isMenor?'border-top:2px solid #1e40af;background:#0a1628':''}" >
+      <td style="${isMenor?'font-weight:700;color:#93c5fd':''}">${r.l}${r.note?` <span style="font-size:9px;color:var(--accent)">${r.note}</span>`:''}
+        ${isMenor&&avgD!==null&&avgE!==null?`<br/><span style="font-size:9px;color:var(--muted)">${minTampoLabel}</span>`:''}
+      </td>
+      <td>${r.c||'—'}</td>
+      <td style="font-weight:700;color:${espColor}">${r.a!==null?r.a.toFixed(2)+' mm':'—'}</td>
+      <td>${r.n}</td>
+      <td style="color:${ok===null?'var(--muted)':ok?'var(--success)':'var(--danger)'};font-weight:700">
+        ${ok===null?'—':ok?'✓ OK':'⚠ Revisar'}
+      </td>
+    </tr>`;
+  });
+  return h+`</tbody></table></div>`;
+}
+
+// ═══ PHOTO ACTIONS ═══
+function triggerFile(key){document.getElementById('file-'+key).click();}
+function triggerCam(key){document.getElementById('cam-'+key).click();}
+function removePhoto(key,idx){regions[key].splice(idx,1);renderContent();}
+let _pvTimer=null;
+function setPhotoValue(key,idx,val){
+  const n=parseFloat(val.replace(',','.'));
+  regions[key][idx].value=isNaN(n)?null:n;
+  clearTimeout(_pvTimer);_pvTimer=setTimeout(renderContent,600);
+}
+
+// ═══ EDITOR DE FOTO (rotacionar / cortar) ═══
+let peTarget=null; // {kind:'region', key, idx} ou {kind:'extra', key}
+let peRotation=0;  // graus, múltiplos de 90
+let peCropMode=false;
+let peCropRect=null; // {x,y,w,h} em pixels do canvas
+let peImg=null;
+
+function peGetPhoto(){
+  if(!peTarget) return null;
+  if(peTarget.kind==='region') return regions[peTarget.key][peTarget.idx];
+  return extras[peTarget.key];
+}
+
+function openPhotoEdit(key,idx){
+  peTarget={kind:'region',key,idx};
+  peStartEdit(regions[key][idx].dataUrl);
+}
+function openPhotoEditExtra(key){
+  if(!extras[key]) return;
+  peTarget={kind:'extra',key};
+  peStartEdit(extras[key].dataUrl);
+}
+
+function peStartEdit(dataUrl){
+  peRotation=0;peCropMode=false;peCropRect=null;
+  const cropBox=document.getElementById('pe-crop-box');
+  if(cropBox) cropBox.style.display='none';
+  const toggle=document.getElementById('pe-crop-toggle');
+  if(toggle) toggle.textContent='✂️ Cortar';
+  peImg=new Image();
+  peImg.onload=()=>{
+    peDrawCanvas();
+    document.getElementById('photo-edit-modal').classList.add('open');
+  };
+  peImg.src=dataUrl;
+}
+
+function peDrawCanvas(){
+  const canvas=document.getElementById('pe-canvas');
+  const ctx=canvas.getContext('2d');
+  const rad=(peRotation%360)*Math.PI/180;
+  const sw=peImg.width, sh=peImg.height;
+  // dimensões do canvas dependem da rotação (90/270 trocam largura/altura)
+  const swapped=Math.abs(peRotation%180)===90;
+  const cw=swapped?sh:sw, ch=swapped?sw:sh;
+  // Limita tamanho de exibição
+  const maxW=440;
+  const scale=cw>maxW?maxW/cw:1;
+  canvas.width=cw*scale;canvas.height=ch*scale;
+  ctx.save();
+  ctx.translate(canvas.width/2,canvas.height/2);
+  ctx.rotate(rad);
+  ctx.scale(scale,scale);
+  ctx.drawImage(peImg,-sw/2,-sh/2,sw,sh);
+  ctx.restore();
+}
+
+function peRotate(delta){
+  peRotation=(peRotation+delta+360)%360;
+  peCropMode=false;peCropRect=null;
+  const cropBox=document.getElementById('pe-crop-box');
+  if(cropBox) cropBox.style.display='none';
+  const toggle=document.getElementById('pe-crop-toggle');
+  if(toggle) toggle.textContent='✂️ Cortar';
+  peDrawCanvas();
+}
+
+function peToggleCrop(){
+  peCropMode=!peCropMode;
+  const canvas=document.getElementById('pe-canvas');
+  const cropBox=document.getElementById('pe-crop-box');
+  const toggle=document.getElementById('pe-crop-toggle');
+  if(peCropMode){
+    toggle.textContent='✓ Aplicar Corte';
+    // Caixa inicial: 70% centralizada
+    const w=canvas.width*0.7, h=canvas.height*0.7;
+    const x=(canvas.width-w)/2, y=(canvas.height-h)/2;
+    peCropRect={x,y,w,h};
+    peRenderCropBox();
+    cropBox.style.display='block';
+    peEnableCropDrag();
+  } else {
+    // Aplica o corte: recorta o canvas para a área selecionada
+    if(peCropRect){
+      const ctx=canvas.getContext('2d');
+      const {x,y,w,h}=peCropRect;
+      const imgData=ctx.getImageData(x,y,w,h);
+      canvas.width=w;canvas.height=h;
+      ctx.putImageData(imgData,0,0);
+    }
+    cropBox.style.display='none';
+    toggle.textContent='✂️ Cortar';
+    peCropRect=null;
+  }
+}
+
+function peRenderCropBox(){
+  const cropBox=document.getElementById('pe-crop-box');
+  const canvas=document.getElementById('pe-canvas');
+  const wrap=document.getElementById('pe-canvas-wrap');
+  const canvasRect=canvas.getBoundingClientRect();
+  const wrapRect=wrap.getBoundingClientRect();
+  const offX=canvasRect.left-wrapRect.left, offY=canvasRect.top-wrapRect.top;
+  cropBox.style.left=(offX+peCropRect.x)+'px';
+  cropBox.style.top=(offY+peCropRect.y)+'px';
+  cropBox.style.width=peCropRect.w+'px';
+  cropBox.style.height=peCropRect.h+'px';
+}
+
+function peEnableCropDrag(){
+  const cropBox=document.getElementById('pe-crop-box');
+  let dragging=false,startX=0,startY=0,startRect=null;
+  const onDown=(e)=>{
+    dragging=true;
+    const pt=e.touches?e.touches[0]:e;
+    startX=pt.clientX;startY=pt.clientY;
+    startRect={...peCropRect};
+    e.preventDefault();
+  };
+  const onMove=(e)=>{
+    if(!dragging) return;
+    const pt=e.touches?e.touches[0]:e;
+    const dx=pt.clientX-startX, dy=pt.clientY-startY;
+    const canvas=document.getElementById('pe-canvas');
+    peCropRect.x=Math.max(0,Math.min(canvas.width-peCropRect.w,startRect.x+dx));
+    peCropRect.y=Math.max(0,Math.min(canvas.height-peCropRect.h,startRect.y+dy));
+    peRenderCropBox();
+  };
+  const onUp=()=>{dragging=false;};
+  cropBox.onmousedown=onDown;cropBox.ontouchstart=onDown;
+  document.onmousemove=onMove;document.ontouchmove=onMove;
+  document.onmouseup=onUp;document.ontouchend=onUp;
+}
+
+function peConfirm(){
+  // Se o usuário deixou o modo corte ativo sem aplicar, aplica antes de confirmar
+  if(peCropMode) peToggleCrop();
+  const canvas=document.getElementById('pe-canvas');
+  const dataUrl=canvas.toDataURL('image/jpeg',0.9);
+  const photo=peGetPhoto();
+  if(photo){
+    photo.dataUrl=dataUrl;
+    photo.url=dataUrl;
+  }
+  closePhotoEdit();
+  renderContent();
+}
+
+function closePhotoEdit(){
+  document.getElementById('photo-edit-modal').classList.remove('open');
+  document.onmousemove=null;document.ontouchmove=null;
+  document.onmouseup=null;document.ontouchend=null;
+  peTarget=null;peImg=null;
+}
+
+function clearExtra(key){extras[key]=null;renderContent();}
+async function handleExtra(key,file){if(!file)return;const url=URL.createObjectURL(file);const dataUrl=await fileToDataUrl(file);extras[key]={url,dataUrl,name:file.name};renderContent();}
+
+async function handleFiles(key,files){
+  const arr=Array.from(files);if(!arr.length)return;
+  if(regions[key].length+arr.length>14){alert('Máximo 14 fotos por região.');return;}
+  const ocrEl=document.getElementById('ocr-'+key);const ocrTxt=document.getElementById('ocr-txt-'+key);
+  if(ocrEl) ocrEl.style.display='';
+  for(let i=0;i<arr.length;i++){
+    const file=arr[i];
+    if(ocrTxt) ocrTxt.textContent=`Analisando ${regions[key].length+1} de ${regions[key].length+arr.length-i}...`;
+    const url=URL.createObjectURL(file);const dataUrl=await fileToDataUrl(file);const base64=dataUrl.split(',')[1];const mime=file.type||'image/jpeg';
+    const value=await extractMeasurement(base64,mime);
+    regions[key].push({url,dataUrl,name:file.name,value});
+    renderContent();
+  }
+  const ocrEl2=document.getElementById('ocr-'+key);if(ocrEl2) ocrEl2.style.display='none';
+}
+
+// ═══ OCR RESCAN ═══
+function _ocrMsg(html){const el=document.getElementById('gen-msg');if(el)el.innerHTML=html;}
+function _ocrBtn(disabled,txt){const b=document.getElementById('btn-scan');if(b){b.disabled=disabled;b.textContent=txt;}}
+
+async function rescanAllPhotos(){
+  if(!getApiKey()){alert('Configure a chave API antes de escanear.');return;}
+  window._ocrLastErr=null;
+  const allKeys=['costado','tampoDir','tampoEsq'];
+  // Sempre re-escaneia todas as fotos
+  allKeys.forEach(k=>{regions[k].forEach(p=>{p.value=null;});});
+  const total=allKeys.reduce((s,k)=>s+regions[k].length,0);
+  if(total===0){_ocrMsg('<div style="color:#f97316;font-size:12px;padding:6px 0">⚠ Sem fotos carregadas na aba Espessura.</div>');return;}
+  _ocrBtn(true,'Lendo...');
+  _ocrMsg(`<div class="ocr-bar" style="text-align:center"><span class="spinner"></span>Iniciando leitura de ${total} foto${total>1?'s':''}...</div>`);
+  let count=0,success=0;
+  try{
+    for(const key of allKeys){
+      const label=key==='costado'?'Costado':key==='tampoDir'?'Tampo Dir.':'Tampo Esq.';
+      for(let i=0;i<regions[key].length;i++){
+        count++;
+        _ocrMsg(`<div class="ocr-bar" style="text-align:center"><span class="spinner"></span>Lendo foto ${count} de ${total} — ${label}...</div>`);
+        const p=regions[key][i];
+        if(!p.dataUrl){continue;}
+        const base64=p.dataUrl.split(',')[1];
+        const mime=p.dataUrl.split(';')[0].split(':')[1]||'image/jpeg';
+        const val=await extractMeasurement(base64,mime);
+        regions[key][i].value=val;
+        if(val!==null) success++;
+      }
+    }
+  }catch(e){
+    _ocrMsg(`<div style="color:#f87171;font-size:12px;padding:6px 0">✗ Erro inesperado: ${e.message}</div>`);
+    _ocrBtn(false,'🔍 Ler fotos com OCR');
+    return;
+  }
+  // Re-renderiza uma vez no final (não dentro do loop)
+  renderContent();
+  // Aguarda um tick para o DOM atualizar, depois escreve o resultado
+  setTimeout(()=>{
+    const avgC=calcAvg(regions.costado),avgD=calcAvg(regions.tampoDir),avgE=calcAvg(regions.tampoEsq);
+    const errLine=window._ocrLastErr?`<div style="color:#fbbf24;font-size:10px;margin-top:3px">Último erro OCR: ${window._ocrLastErr}</div>`:'';
+    const cor=success>0?'#4ade80':'#f87171';
+    _ocrMsg(`<div style="color:${cor};font-size:12px;font-weight:700;padding:6px 0">
+      ${success>0?'✓':'✗'} OCR: ${success} de ${total} fotos lidas
+      <span style="font-weight:400;font-size:11px;margin-left:8px">Costado: ${avgC!==null?avgC.toFixed(2)+' mm':'—'} · Tampo Dir: ${avgD!==null?avgD.toFixed(2)+' mm':'—'} · Tampo Esq: ${avgE!==null?avgE.toFixed(2)+' mm':'—'}</span>
+      ${errLine}
+    </div>`);
+  },100);
+}
+
+// ═══ PRESSÃO — CONVERSÃO ═══
+const CONV={
+  'bar':     {bar:1,      'lbf/pol²':14.5038, 'kgf/cm²':1.01972, 'MPa':0.1},
+  'lbf/pol²':{bar:0.0689476,'lbf/pol²':1,    'kgf/cm²':0.0703070,'MPa':0.00689476},
+  'kgf/cm²': {bar:0.980665,'lbf/pol²':14.2233,'kgf/cm²':1,        'MPa':0.0980665},
+  'MPa':     {bar:10,     'lbf/pol²':145.038, 'kgf/cm²':10.1972,  'MPa':1},
+};
+function fmt2(n){return isNaN(n)||n===0?'0,00':n.toFixed(2).replace('.',',');}
+function fmt3(n){return isNaN(n)||n===0?'0,000':n.toFixed(3).replace('.',',');}
+
+function updatePressure(valKey,barKey,lbfKey,kgfKey,mpaKey,unitKey,rawVal){
+  const v=parseFloat(rawVal.replace(',','.'));
+  formData[valKey]=rawVal;
+  if(isNaN(v)){return;}
+  const unit=formData[unitKey]||'bar';
+  const fac=CONV[unit]||CONV['bar'];
+  formData[barKey]=fmt2(v*fac['bar']);
+  formData[lbfKey]=fmt2(v*fac['lbf/pol²']);
+  formData[kgfKey]=fmt2(v*fac['kgf/cm²']);
+  formData[mpaKey]=fmt3(v*fac['MPa']);
+  calcPV();
+  renderContent();
+}
+function recalcPressureFromUnit(valKey,barKey,lbfKey,kgfKey,mpaKey,unitKey){
+  updatePressure(valKey,barKey,lbfKey,kgfKey,mpaKey,unitKey,formData[valKey]||'0');
+}
+function calcPV(){
+  const p=parseFloat((formData.pmta_mpa||'0').replace(',','.'));
+  const v=parseFloat((formData.volume_m3||'0').replace(',','.'));
+  const pv=p*v;
+  formData.pv_resultado=isNaN(pv)||pv===0?'—':pv.toFixed(3).replace('.',',');
+  formData.pv_menor1=pv>0&&pv<1;
+}
+function applySuggestion(pr,cl,cat){
+  formData.potencial_risco=pr;
+  formData.classe_fluido=cl;
+  formData.categoria=cat;
+  renderContent();
+}
+
+// ═══ PDF/IMAGEM HANDLERS (multi-página) — usados pela ART e pelos Anexos 15/16/17 ═══
+function clearART(){artPages=[];renderContent();}
+
+async function handlePdfToPages(file,loadElId){
+  if(!file) return [];
+  const loadEl=loadElId?document.getElementById(loadElId):null;
+  if(loadEl) loadEl.style.display='';
+  let pages=[];
+  try{
+    if(window.pdfjsLib){
+      pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      const arrayBuf=await file.arrayBuffer();
+      const pdf=await pdfjsLib.getDocument({data:arrayBuf}).promise;
+      const numPages=pdf.numPages;
+      for(let i=1;i<=numPages;i++){
+        const page=await pdf.getPage(i);
+        const viewport=page.getViewport({scale:1.8});
+        const canvas=document.createElement('canvas');
+        canvas.width=viewport.width; canvas.height=viewport.height;
+        const ctx=canvas.getContext('2d');
+        await page.render({canvasContext:ctx,viewport}).promise;
+        pages.push({dataUrl:canvas.toDataURL('image/jpeg',0.92),pageNum:i});
+      }
+    } else {
+      const dataUrl=await fileToDataUrl(file);
+      pages=[{dataUrl,pageNum:1}];
+    }
+  } catch(e){
+    alert('Erro ao processar PDF: '+e.message);
+  }
+  if(loadEl) loadEl.style.display='none';
+  return pages;
+}
+
+async function handleARTPdf(file){
+  artPages=await handlePdfToPages(file,'art-loading');
+  renderContent();
+}
+
+async function handleARTImages(files){
+  const arr=Array.from(files);
+  for(const file of arr){
+    const dataUrl=await fileToDataUrl(file);
+    artPages.push({dataUrl,pageNum:artPages.length+1});
+  }
+  // Re-number
+  artPages=artPages.map((p,i)=>({...p,pageNum:i+1}));
+  renderContent();
+}
+
+// ═══ ANEXOS CALIBRAÇÃO (15/16/17): PDF ou Imagem, multi-página ═══
+function clearCalib(key){calibPages[key]=[];renderContent();}
+
+async function handleCalibPdf(key,file){
+  const pages=await handlePdfToPages(file,'calib-loading-'+key);
+  calibPages[key]=pages;
+  renderContent();
+}
+
+async function handleCalibImages(key,files){
+  const arr=Array.from(files);
+  for(const file of arr){
+    const dataUrl=await fileToDataUrl(file);
+    calibPages[key].push({dataUrl,pageNum:calibPages[key].length+1});
+  }
+  calibPages[key]=calibPages[key].map((p,i)=>({...p,pageNum:i+1}));
+  renderContent();
+}
+
+
+function getApiKey(){return localStorage.getItem('nr13_api_key')||'';}
+function saveApiKey(k){localStorage.setItem('nr13_api_key',k.trim());}
+
+async function extractMeasurement(base64,mimeType){
+  const key=getApiKey();
+  if(!key){window._ocrLastErr='Chave API não configurada.';return null;}
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:80,
+    messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:mimeType,data:base64}},
+    {type:'text',text:'Ultrasound thickness gauge photo. Read ONLY the main numeric reading on the display (mm). Reply with just the number e.g. 4.87. If unreadable reply: null'}]}]})});
+    const d=await res.json();
+    if(!res.ok||d.error){
+      const msg=d.error?.message||JSON.stringify(d.error)||`HTTP ${res.status}`;
+      window._ocrLastErr='API: '+msg;
+      console.error('[OCR] Erro API:',d);
+      return null;
+    }
+    const t=(d.content?.[0]?.text||'null').trim();
+    console.log('[OCR] resposta:',t);
+    if(t.toLowerCase()==='null'||t===''){ window._ocrLastErr='Imagem ilegível (null)'; return null; }
+    const n=parseFloat(t.replace(',','.'));
+    if(isNaN(n)){window._ocrLastErr='Formato inválido: '+t;return null;}
+    window._ocrLastErr=null;
+    return n;
+  }catch(e){window._ocrLastErr='Erro rede: '+e.message;return null;}
+}
+</script>
+<script>
+// ═══ QR CODE ═══
+// Monta o texto codificado no QR Code com o resumo da inspeção
+function buildQRInfoString(){
+  const d=formData;
+  const avgC=calcAvg(regions.costado),avgD=calcAvg(regions.tampoDir),avgE=calcAvg(regions.tampoEsq);
+  return [
+    `LAUDO DE INSPEÇÃO VP ${d.vp_numero}`,
+    `Relatório: ${d.num_relatorio}`,
+    `Cliente: ${d.cliente_nome}`,
+    `Equipamento: ${d.identificacao}`,
+    `Tag: ${d.tag_vaso}`,
+    `Inspeção: ${d.data_inicio} a ${d.data_termino}`,
+    `Costado: ${avgC!==null?avgC.toFixed(2)+' mm':'—'} (calc: ${d.esp_min_calc_costado})`,
+    `Tampo Dir: ${avgD!==null?avgD.toFixed(2)+' mm':'—'} (calc: ${d.esp_min_calc_tampo_dir})`,
+    `Tampo Esq: ${avgE!==null?avgE.toFixed(2)+' mm':'—'} (calc: ${d.esp_min_calc_tampo_esq})`,
+    `Pressão Op: ${d.pressao_operacao_bar}`,
+    `PMTA: ${d.pmta_bar} Bar / ${d.pmta_lbf} lbf/pol²`,
+    `Próx. Inspeção: ${d.data_prox_insp_ext}`,
+    `Engenheiro: Thiago da Silva Santos`,
+    `CREA-MG: 1420455354`,
+    `ALC Compressores`,
+    `Gerado: ${new Date().toLocaleDateString('pt-BR')}`,
+  ].join('\n');
+}
+
+// Gera o QR Code e retorna data URL PNG.
+// qrcodejs renderiza o canvas SINCRONAMENTE — não precisa de timeout.
+function _qrMakeHolder(){
+  const h=document.createElement('div');
+  h.style.cssText='position:fixed;left:-300px;top:0;width:256px;height:256px;overflow:hidden;z-index:-9999';
+  return h;
+}
+function _qrExtract(holder){
+  const canvas=holder.querySelector('canvas');
+  const img=holder.querySelector('img');
+  let url=null;
+  if(canvas&&canvas.width>0){try{url=canvas.toDataURL('image/png');}catch(e){}}
+  if(!url&&img&&img.src&&img.src.startsWith('data:')) url=img.src;
+  return url;
+}
+function generateQRDataUrl(){
+  return new Promise((resolve)=>{
+    try{
+      if(typeof QRCode==='undefined'){resolve(null);return;}
+      const d=formData;
+      const avgC=calcAvg(regions.costado),avgD=calcAvg(regions.tampoDir),avgE=calcAvg(regions.tampoEsq);
+      // Texto curto = QR menor = geração mais confiável
+      const qrText=[
+        `VP${d.vp_numero} ${d.num_relatorio}`,
+        d.cliente_nome,
+        d.identificacao,
+        `${d.data_inicio}~${d.data_termino}`,
+        `C:${avgC!==null?avgC.toFixed(2):'?'} D:${avgD!==null?avgD.toFixed(2):'?'} E:${avgE!==null?avgE.toFixed(2):'?'}mm`,
+        `PMTA:${d.pmta_bar}Bar`,
+        `Eng:Thiago Santos CREA:1420455354`,
+      ].join('\n');
+      const opts={text:qrText,width:256,height:256,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.L};
+
+      // Tentativa 1: extração síncrona (qrcodejs usa canvas síncrono no Chrome)
+      const h1=_qrMakeHolder();
+      document.body.appendChild(h1);
+      try{new QRCode(h1,opts);}catch(e){document.body.removeChild(h1);resolve(null);return;}
+      const url1=_qrExtract(h1);
+      document.body.removeChild(h1);
+      if(url1){resolve(url1);return;}
+
+      // Tentativa 2: aguarda 2 frames de animação (para ambientes que renderizam async)
+      const h2=_qrMakeHolder();
+      document.body.appendChild(h2);
+      try{new QRCode(h2,opts);}catch(e){document.body.removeChild(h2);resolve(null);return;}
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{
+        const url2=_qrExtract(h2);
+        document.body.removeChild(h2);
+        if(url2){resolve(url2);return;}
+
+        // Tentativa 3: último recurso, 1s de espera
+        const h3=_qrMakeHolder();
+        document.body.appendChild(h3);
+        try{new QRCode(h3,opts);}catch(e){document.body.removeChild(h3);resolve(null);return;}
+        setTimeout(()=>{
+          const url3=_qrExtract(h3);
+          try{document.body.removeChild(h3);}catch(_){}
+          resolve(url3);
+        },1000);
+      }));
+    }catch(e){resolve(null);}
+  });
+}
+
+function showQR(){
+  const d=formData;
+  const avgC=calcAvg(regions.costado),avgD=calcAvg(regions.tampoDir),avgE=calcAvg(regions.tampoEsq);
+  const ok=avgC!==null&&avgD!==null&&avgE!==null;
+  const info=buildQRInfoString();
+
+  document.getElementById('qr-subtitle').textContent=`VP ${d.vp_numero} · ${d.num_relatorio}`;
+  document.getElementById('qr-info').innerHTML=`
+    <div style="text-align:left;font-size:10px;color:#475569;line-height:1.7">
+      <b style="color:#1e3a8a">${d.cliente_nome}</b><br/>
+      ${d.identificacao}<br/>
+      Inspeção: ${d.data_inicio} → ${d.data_termino}<br/>
+      Pressão Op.: ${d.pressao_operacao_bar}<br/>
+      Próx. Inspeção: ${d.data_prox_insp_ext}<br/>
+      <span style="color:${ok?'#16a34a':'#dc2626'};font-weight:700">${ok?'✓ APROVADO':'⚠️ PREENCHA OS DADOS'}</span>
+    </div>`;
+
+  const canvas=document.getElementById('qr-canvas');
+  canvas.innerHTML='';
+  new QRCode(canvas,{text:info,width:220,height:220,colorDark:'#1e3a8a',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+  document.getElementById('qr-modal').classList.add('open');
+}
+function closeQR(){document.getElementById('qr-modal').classList.remove('open');}
+
+// ═══ DOCUMENT GENERATION ═══
+function imgT(p,w,h,style=''){return p&&p.dataUrl?`<img src="${p.dataUrl}" width="${w}" height="${h}" style="object-fit:cover;border-radius:4px;display:block;${style}"/>`:'<div style="background:#f0f0f0;border:1px solid #ccc;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#888;width:'+w+'px;height:'+h+'px">[sem foto]</div>';}
+function photoGrid(photos){
+  if(!photos.length) return '';
+  return `<div style="display:flex;flex-wrap:wrap;gap:8px;margin:8px 0">`+photos.map(p=>`<div style="text-align:center">${imgT(p,145,105)}<br/><small style="font-weight:bold">${p.value!==null?p.value+' mm':'—'}</small></div>`).join('')+`</div>`;
+}
+
+function buildHTML(qrDataUrl){
+  const d=formData;
+  const avgC=calcAvg(regions.costado),avgD=calcAvg(regions.tampoDir),avgE=calcAvg(regions.tampoEsq);
+  const featC=closestToAvg(regions.costado,2),featD=closestToAvg(regions.tampoDir,1),featE=closestToAvg(regions.tampoEsq,1);
+  const pb=`<div style="page-break-after:always;break-after:page;height:0;overflow:hidden;line-height:0;font-size:0"> </div>`;
+  const cbChecked=(group,key)=>checkboxes[group][key];
+  const xMark=(v)=>v?'X':'';
+
+  // calc memorial
+  const P=parseFloat((d.mem_pressao_mpa||'0').replace(',','.'))||0;
+  const R=parseFloat((d.mem_raio_mm||'0').replace(',','.'))||0;
+  const S=parseFloat((d.mem_tensao||'0').replace(',','.'))||0;
+  const E=parseFloat((d.mem_efic_costado||'0').replace(',','.'))||0;
+  const C=parseFloat((d.mem_sobrec||'0').replace(',','.'))||0;
+  const eCostado=isFinite((P*R)/(S*E-0.6*P)+C)?(P*R)/(S*E-0.6*P)+C:0;
+  const St=parseFloat((d.mem_tensao_tampo||'0').replace(',','.'))||0;
+  const Et=parseFloat((d.mem_efic_tampo||'0').replace(',','.'))||0;
+  const Ct=parseFloat((d.mem_sobrec_tampo||'0').replace(',','.'))||0;
+  const eTampo=isFinite((P*R)/(St*Et-0.1*P)+Ct)?(P*R)/(St*Et-0.1*P)+Ct:0;
+
+  // Cabeçalho interno — logo ALC à esquerda + título centralizado
+  const HEADER=`<table style="width:100%;border-collapse:collapse;margin-bottom:0;border:2px solid #212F62">
+    <tr>
+      <td style="width:100px;padding:3px 6px;vertical-align:middle;text-align:center;border-right:2px solid #212F62;background:#f8faff">
+        <img src="${ALC_LOGO_B64}" style="width:80px;height:auto;display:block;margin:0 auto"/>
+      </td>
+      <td style="padding:4px 12px;vertical-align:middle;text-align:center">
+        <div style="font-size:10pt;font-weight:900;color:#212F62;letter-spacing:0.2px;line-height:1.2">RELATÓRIO DE INSPEÇÃO DE SEGURANÇA DE VASO DE PRESSÃO</div>
+        <div style="font-size:8pt;font-weight:700;color:#212F62;margin-top:2px">LAUDO DE INSPEÇÃO — VP ${d.vp_numero||'01'} · ${d.num_relatorio||''}</div>
+        <div style="background:#212F62;height:2px;margin:3px 0 1px"></div>
+        <div style="background:#C81F25;height:1.5px"></div>
+      </td>
+    </tr>
+  </table>`;
+
+  // Paginação: oculta na capa (page 1), aparece a partir do Sumário (page 2), sempre no canto inferior direito
+  const FOOTER_CSS=`@page{size:A4;margin:18mm 16mm 20mm 16mm}
+    @page{@bottom-right{content:"Página " counter(page) " de " counter(pages);font-size:8pt;color:#475569}}
+    @page capa{@bottom-right{content:""}}
+    .capa-page{page:capa}
+    a.toc-link{color:inherit;text-decoration:none}`;
+
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"/>
+  <title></title>
+  <style>
+    ${FOOTER_CSS}
+    body{font-family:Arial,Helvetica,sans-serif;font-size:9pt;color:#111;counter-reset:page;margin:0;padding:0}
+    h2{font-size:10pt;color:#1e3a8a;border-bottom:2px solid #93c5fd;padding-bottom:2px;margin:10px 0 6px;page-break-after:avoid;text-align:left}
+    table{border-collapse:collapse;width:100%;margin:5px 0;font-size:8.5pt}
+    td,th{border:1px solid #ccc;padding:3px 6px;vertical-align:middle;text-align:center}
+    th{background:#dbeafe;font-weight:bold;text-align:center}
+    .lbl{font-weight:bold;background:#f0f4ff;width:35%;text-align:left}
+    .c{text-align:center}.bold{font-weight:bold}
+    .toc-row{display:flex;align-items:baseline;padding:2px 0}
+    .toc-num{font-weight:700;width:28px;flex-shrink:0}
+    .toc-title{font-weight:700;text-transform:uppercase;font-size:9pt}
+    .toc-dots{flex:1;border-bottom:1px dotted #999;margin:0 6px;position:relative;top:-3px}
+    .toc-pg{font-weight:700;min-width:28px;text-align:right}
+    .status-box{display:inline-block;padding:2px 8px;border-radius:3px;font-weight:700;font-size:9pt}
+    .ap-box{background:#dcfce7;color:#166534}
+    .ae-box{background:#fef9c3;color:#854d0e}
+    .na-box{background:#f1f5f9;color:#64748b}
+    .cb-inline{display:inline-block;width:14px;height:14px;border:1.5px solid #333;border-radius:2px;text-align:center;font-size:8pt;line-height:13px;margin-right:5px;vertical-align:middle}
+    .hdr{margin-bottom:14px}
+    @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+  </style></head><body>
+
+  <!-- PG 1: CAPA (sem paginação) -->
+  <div class="capa-page" style="text-align:center;height:252mm;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;padding:12px 10px 8px;overflow:hidden;page-break-after:always;break-after:page">
+    <div>
+      <div style="width:360px;height:5px;background:#212F62;margin:0 auto"></div>
+      <div style="width:360px;height:3px;background:#C81F25;margin:2px auto 0"></div>
+      <div style="width:360px;height:3px;background:#212F62;margin:2px auto 0"></div>
+      <div style="width:360px;height:5px;background:#C81F25;margin:2px auto 20px"></div>
+      <div style="font-size:26pt;font-weight:900;color:#212F62;line-height:1.2">${d.titulo_linha1||'INSPEÇÃO DE SEGURANÇA'}<br/>${d.titulo_linha2||'VASO DE PRESSÃO'}</div>
+      <div style="font-size:16pt;font-weight:700;color:#C81F25;margin:16px 0">${d.mes_ano_inicio} / ${d.mes_ano_fim}</div>
+      <div style="width:432px;height:5px;background:#212F62;margin:16px auto 0"></div>
+      <div style="width:432px;height:3px;background:#C81F25;margin:2px auto 0"></div>
+      <div style="width:432px;height:3px;background:#212F62;margin:2px auto 0"></div>
+      <div style="width:432px;height:5px;background:#C81F25;margin:2px auto 0"></div>
+      <div style="margin:16px auto;max-width:420px;min-height:200px;border:2px solid #e2e8f0;border-radius:8px;padding:12px;display:flex;align-items:center;justify-content:center">
+        ${extras.imgEquip?`<img src="${extras.imgEquip.dataUrl}" style="max-width:100%;max-height:200px;object-fit:contain"/>`:
+        `<div style="color:#94a3b8;font-size:11pt">[Logo do Cliente]</div>`}
+      </div>
+      <div style="width:432px;height:5px;background:#C81F25;margin:0 auto 0"></div>
+      <div style="width:432px;height:3px;background:#212F62;margin:2px auto 0"></div>
+      <div style="width:432px;height:3px;background:#C81F25;margin:2px auto 0"></div>
+      <div style="width:432px;height:5px;background:#212F62;margin:2px auto 16px"></div>
+      <div style="font-size:18pt;font-weight:900;color:#212F62;margin-top:20px">${d.equip_linha1||'COMPRESSOR DE AR COMPRIMIDO'}<br/>${(d.equip_linha2||'VASO DE PRESSÃO').includes('VP')?d.equip_linha2:(d.equip_linha2||'VASO DE PRESSÃO')+' – VP '+d.vp_numero}</div>
+    </div>
+    <div style="font-size:9pt;color:#333;line-height:1.5">
+      <p style="margin-bottom:2px">${d.cliente_nome}</p>
+      <p>${d.cliente_end}</p>
+      <p>${d.cliente_cidade}</p>
+      <p>CNPJ: ${d.cliente_cnpj}</p>
+    </div>
+    <div style="font-size:9pt;color:#475569;line-height:1.7;text-align:center;margin-top:60px">
+      <p style="font-weight:700">Eng. Responsável: Thiago da Silva Santos</p>
+      <p style="font-weight:700">Engenheiro Mecânico · CREA-MG: 1420455354</p>
+      <p>Rua EE, 35 – Arvoredo – Contagem/MG</p>
+      <p>(31) 3485-7222 · (31) 9 9350-3718 · alc.compressores@hotmail.com</p>
+    </div>
+  </div>
+
+  <!-- PG 2: SUMÁRIO -->
+  ${(()=>{
+    const artPgs=Math.max(artPages.length,1);
+    const manoPgs=Math.max(calibPages.manometro.length,1);
+    const valvPgs=Math.max(calibPages.valvula.length,1);
+    const instPgs=Math.max(calibPages.instrumento.length,1);
+    let p=3;
+    const pg={
+      sec1:p,
+      sec2:(p+=artPgs), sec3:p,
+      sec4:(p+=1), sec5:p, sec6:p,
+      sec7:(p+=1),
+      sec8:(p+=1),
+      sec9:(p+=1),
+      sec10:(p+=1),
+      sec11:(p+=1),
+      sec12:(p+=2), sec13:p,
+      sec14:(p+=1),
+      sec15:(p+=1),
+      sec16:(p+=manoPgs),
+      sec17:(p+=valvPgs),
+      sec18:(p+=instPgs),
+    };
+    return `<div class="hdr">${HEADER}</div>
+    <h2 style="font-size:12pt;border:none;color:#111;text-align:center;margin-bottom:10px">Sumário</h2>
+    ${[['1.','ART REFERENTE A OBRA/SERVIÇO','sec1'],['2.','IMAGEM DO EQUIPAMENTO','sec2'],
+      ['3.','ESCOPO DE RELATÓRIO DE INSPEÇÃO DE SEGURANÇA CONFORME NR-13','sec3'],
+      ['4.','INFORMAÇÕES GERAIS','sec4'],['5.','DADOS DE INSPEÇÃO','sec5'],
+      ['6.','IDENTIFICAÇÃO DO VASO DE PRESSÃO','sec6'],['7.','RELATÓRIO DOS DADOS DE INSPEÇÃO','sec7'],
+      ['8.','AÇÕES A SEREM EXECUTADAS','sec8'],['9.','MEMORIAIS DE CÁLCULOS','sec9'],
+      ['10.','CERTIFICADO DE MEDIÇÃO DE ESPESSURA','sec10'],['11.','REGISTROS FOTOGRÁFICOS','sec11'],
+      ['12.','RECOMENDAÇÕES','sec12'],['13.','NOTAS TÉCNICAS DO VASO DE PRESSÃO','sec13'],
+      ['14.','CONCLUSÃO','sec14'],['15.','ANEXO 1 – CERTIFICADO DE CALIBRAÇÃO DO MANÔMETRO','sec15'],
+      ['16.','ANEXO 2 – CERTIFICADO DE CALIBRAÇÃO VÁLVULA DE SEGURANÇA','sec16'],
+      ['17.','ANEXO 3 – CERTIFICADO DE CALIBRAÇÃO DO INSTRUMENTO UTILIZADO','sec17'],
+      ['18.','ANEXO 4 – COMPROVANTE DE PAGAMENTO A.R.T','sec18'],
+    ].map(([n,t,anchor])=>`<a class="toc-link" href="#${anchor}"><div class="toc-row"><span class="toc-num">${n}</span><span class="toc-title">${t}</span><span class="toc-dots"></span><span class="toc-pg">${pg[anchor]||''}</span></div></a>`).join('')}`;
+  })()}
+  ${pb}
+
+  <!-- PG 3+: SEÇÃO 1 - ART (1 página PDF por folha impressa) -->
+  ${artPages.length>0
+    ? artPages.map((p,i)=>`
+        ${i>0?pb:''}
+        <div class="hdr">${HEADER}</div>
+        ${i===0?'<h2 id="sec1">1. ART REFERENTE A OBRA/SERVIÇO</h2>':''}
+        <div style="text-align:center;margin:2px 0">
+          <img src="${p.dataUrl}" style="width:100%;max-height:${i===0?'218mm':'232mm'};height:auto;object-fit:contain;display:block;margin:0 auto"/>
+        </div>
+        <p style="font-size:7.5pt;color:#475569;text-align:center;margin-top:2px">Página ${p.pageNum} de ${artPages.length}</p>`).join('')
+    : `<div class="hdr">${HEADER}</div>
+       <h2 id="sec1">1. ART REFERENTE A OBRA/SERVIÇO</h2>
+       <p style="color:#888;font-style:italic;font-size:9pt">[Inserir ART — carregue o PDF na aba Anexos]</p>`
+  }
+  ${artPages.length>0?pb:''}
+
+  <!-- SEÇÃO 2 + 3: imagem do equipamento e escopo NR-13 -->
+  <div class="hdr">${HEADER}</div>
+  <h2 id="sec2">2. IMAGEM DO EQUIPAMENTO</h2>
+  ${extras.fotoEquip
+    ? `<div style="text-align:center;margin:20px 0"><img src="${extras.fotoEquip.dataUrl}" style="max-width:520px;max-height:360px;object-fit:contain;border-radius:4px;border:1px solid #e2e8f0;display:block;margin:0 auto"/></div>`
+    : `<div style="height:200px;display:flex;align-items:center;justify-content:center;border:1.5px dashed #e2e8f0;border-radius:8px;margin:20px 0"><p style="color:#888;font-style:italic;font-size:10pt;text-align:center">[Inserir imagem do equipamento — use câmera ou arquivo na aba Capa]</p></div>`}
+  <h2 id="sec3">3. ESCOPO DE RELATÓRIO DE INSPEÇÃO DE SEGURANÇA CONFORME NR-13</h2>
+  <p style="font-weight:700;margin:8px 0 6px;font-size:10pt;text-align:justify">Este relatório foi desenvolvido conforme subitem 13.5.4.14</p>
+  <div style="line-height:1.6;margin:6px 0;font-size:10pt">
+  ${['A) Identificação do vaso e pressão','B) Categoria do vaso de pressão','C) Fluidos de serviço','D) Tipo do vaso de pressão',
+    'E) Tipo de inspeção executada','F) Data de início e término da inspeção','G) Descrição das inspeções, exames e testes executados',
+    'H) Registro fotográfico das anomalias do exame interno do vaso de pressão','I) Resultado das inspeções e intervenções executadas',
+    'J) Recomendações e providências necessárias','K) Parecer conclusivo quanto à integridade do vaso de pressão até a próxima inspeção',
+    'L) Data prevista para a nova inspeção de segurança','M) Nome legível, assinatura e número do registro no CREA.'
+  ].map(x=>`<p style="margin:0;text-align:justify">${x};</p>`).join('')}
+  </div>
+  ${pb}
+
+  <!-- SEÇÃO 4 + 5 + 6: informações gerais, dados de inspeção e identificação do vaso -->
+  <div class="hdr">${HEADER}</div>
+  <h2 id="sec4">4. INFORMAÇÕES GERAIS</h2>
+  <table style="width:92%;margin:4px auto;font-size:9pt">
+    <tr style="height:20px"><td class="lbl" style="width:30%;padding:2px 5px">Cliente</td><td style="padding:2px 5px">${d.cliente}</td></tr>
+    <tr style="height:20px"><td class="lbl" style="padding:2px 5px">Identificação</td><td style="padding:2px 5px">${d.identificacao}</td></tr>
+    <tr style="height:20px"><td class="lbl" style="padding:2px 5px">Tag</td><td style="padding:2px 5px">${d.tag}</td></tr>
+    <tr style="height:20px"><td class="lbl" style="padding:2px 5px">Nº do Relatório</td><td style="padding:2px 5px">${d.num_relatorio}</td></tr>
+    <tr style="height:20px"><td class="lbl" style="padding:2px 5px">Local</td><td style="padding:2px 5px">${d.local}</td></tr>
+    <tr style="height:20px"><td class="lbl" style="padding:2px 5px">Localização</td><td style="padding:2px 5px">${d.localizacao}</td></tr>
+  </table>
+  <h2 id="sec5" style="margin-top:8px">5. DADOS DE INSPEÇÃO</h2>
+  <p style="font-size:9pt;margin:4px 0"><b>Formato / Tipo:</b> ${d.formato_tipo}</p>
+  <p style="font-size:9pt;margin:4px 0"><b>Data Início da Inspeção:</b> ${d.data_inicio} – <b>Hora inicial:</b> ${d.hora_inicio}</p>
+  <p style="font-size:9pt;margin:4px 0"><b>Data Término Inspeção:</b> ${d.data_termino} – <b>Hora término:</b> ${d.hora_termino}</p>
+  <table style="width:100%;margin:14px 0;border:none">
+    <tr style="border:none">
+      <td style="border:none;vertical-align:top;width:33%;text-align:center">
+        <p style="margin-bottom:4px"><b>Característica da Inspeção</b></p>
+        <table style="width:140px;margin:0 auto"><tr><td style="width:30px" class="c">${cbChecked('carac','interna')?'X':''}</td><td>Interna</td></tr><tr><td class="c">${cbChecked('carac','externa')?'X':''}</td><td>Externa</td></tr></table>
+      </td>
+      <td style="border:none;vertical-align:top;width:34%;text-align:center">
+        <p style="margin-bottom:4px"><b>Tipo de Inspeção</b></p>
+        <table style="width:100%;margin:0 auto">
+          <tr><td style="width:24px" class="c">${xMark(cbChecked('tipo','liq_penetrante'))}</td><td>Líquido Penetrante</td></tr>
+          <tr><td class="c">${xMark(cbChecked('tipo','metalografia'))}</td><td>Metalografia</td></tr>
+          <tr><td class="c">${xMark(cbChecked('tipo','videoscopia'))}</td><td>Videoscopia</td></tr>
+          <tr><td class="c">${xMark(cbChecked('tipo','ultrassom'))}</td><td>Ultrassom</td></tr>
+          <tr><td class="c">${xMark(cbChecked('tipo','teste_hidro'))}</td><td>Teste Hidrostático</td></tr>
+          <tr><td class="c">${xMark(cbChecked('tipo','visual'))}</td><td>Visual</td></tr>
+          <tr><td class="c">${xMark(cbChecked('tipo','part_magnetica'))}</td><td>Partícula Magnética</td></tr>
+          <tr><td class="c">${xMark(cbChecked('tipo','radiografia'))}</td><td>Radiografia</td></tr>
+        </table>
+      </td>
+      <td style="border:none;vertical-align:top;width:33%;text-align:center">
+        <p style="margin-bottom:4px"><b>Eventos de Inspeção</b></p>
+        <table style="width:160px;margin:0 auto"><tr><td style="width:30px" class="c">${xMark(cbChecked('evento','inicial'))}</td><td>Inicial</td></tr><tr><td class="c">${xMark(cbChecked('evento','periodica'))}</td><td>Periódica</td></tr><tr><td class="c">${xMark(cbChecked('evento','extraordinaria'))}</td><td>Extraordinária</td></tr></table>
+      </td>
+    </tr>
+  </table>
+  <h2 id="sec6" style="margin-top:18px">6. IDENTIFICAÇÃO DO VASO DE PRESSÃO</h2>
+  <table style="font-size:9.5pt"><tr><th colspan="2" style="padding:2px 6px">Dados de Placa</th></tr>
+  ${[['Ano de Fabricação',d.ano_fabricacao],['Fabricante',d.fabricante],['Modelo',d.modelo],['Nº Série',d.num_serie],
+    ['Tag',d.tag_vaso],['Tipo de Fluido',d.tipo_fluido],
+    ['Volume Interno',`${d.volume_litros} Litros (${d.volume_m3} m³)`],
+    ['PMTA',`${d.pmta_lbf} lbf/pol² · ${d.pmta_bar} Bar · ${d.pmta_kgf} kgf/cm² · ${d.pmta_mpa} MPa`],
+    ['Pressão de Teste Hidrostático',`${d.ph_lbf} lbf/pol² · ${d.ph_bar} Bar · ${d.ph_kgf} kgf/cm² · ${d.ph_mpa} MPa`],
+    ['Código de Projeto',d.codigo_projeto],['Acessórios',d.acessorios],
+    ['Código de registro INMETRO',d.codigo_inmetro],['Tipo',d.tipo_vaso]
+  ].map(([k,v])=>`<tr style="height:20px"><td class="lbl" style="padding:2px 5px">${k}</td><td style="padding:2px 5px">${v}</td></tr>`).join('')}
+  <tr><th colspan="2" style="padding:2px 6px">Categorização do Vaso</th></tr>
+  <tr style="height:20px"><td class="lbl" style="padding:2px 5px">Cálculo P.V (PMTA MPa × Volume m³)</td><td style="padding:2px 5px"><b>${d.pv_resultado}</b> &nbsp;∴&nbsp; ${parseFloat((d.pv_resultado||'').replace(',','.'))<1?'P.V &lt; 1':'P.V ≥ 1'}</td></tr>
+  <tr style="height:20px"><td class="lbl" style="padding:2px 5px">Potencial de Risco</td><td style="padding:2px 5px">${d.potencial_risco}</td></tr>
+  <tr style="height:20px"><td class="lbl" style="padding:2px 5px">Classe do Fluido</td><td style="padding:2px 5px">${d.classe_fluido}</td></tr>
+  <tr style="height:20px"><td class="lbl" style="padding:2px 5px">Categoria</td><td style="padding:2px 5px">${d.categoria}</td></tr>
+  </table>
+  ${pb}
+
+  <!-- SEÇÃO 7 (parte 1 — itens 5.1 a 5.21) -->
+  <div class="hdr">${HEADER}</div>
+  <h2 id="sec7">7. RELATÓRIO DOS DADOS DE INSPEÇÃO</h2>
+  <table style="font-size:9pt"><thead><tr><th style="width:48px">Item</th><th>Itens Inspecionados</th><th style="width:70px">Status</th><th style="width:50px">NR's</th><th>Observações</th></tr></thead>
+  <tbody>${itensInspecao.filter(it=>{const n=parseFloat(it.id.split('.')[1]);return n<=21;}).map(it=>`<tr style="height:28px"><td class="c bold">${it.id}</td><td>${it.item}</td>
+    <td class="c"><span class="status-box ${it.status==='AP'?'ap-box':it.status==='AE'?'ae-box':'na-box'}">${it.status}</span></td>
+    <td class="c">NR 13</td><td>${it.obs}</td></tr>`).join('')}
+  </tbody></table>
+  <div style="margin-top:12px;display:flex;gap:14px;font-size:9.5pt">
+    <span style="background:#dcfce7;color:#166534;padding:3px 10px;border-radius:4px;font-weight:700">AP</span> Aprovado sem Restrições &nbsp;
+    <span style="background:#fef9c3;color:#854d0e;padding:3px 10px;border-radius:4px;font-weight:700">AE</span> Ações a Serem Executadas &nbsp;
+    <span style="background:#f1f5f9;color:#64748b;padding:3px 10px;border-radius:4px;font-weight:700">RP</span> Reprovado
+  </div>
+  ${pb}
+
+  <!-- SEÇÃO 7 (parte 2 — itens 5.22 a 5.29) + SEÇÃO 8 -->
+  <div class="hdr">${HEADER}</div>
+  <table style="font-size:9pt"><thead><tr><th style="width:48px">Item</th><th>Itens Inspecionados</th><th style="width:70px">Status</th><th style="width:50px">NR's</th><th>Observações</th></tr></thead>
+  <tbody>${itensInspecao.filter(it=>{const n=parseFloat(it.id.split('.')[1]);return n>21;}).map(it=>`<tr style="height:28px"><td class="c bold">${it.id}</td><td>${it.item}</td>
+    <td class="c"><span class="status-box ${it.status==='AP'?'ap-box':it.status==='AE'?'ae-box':'na-box'}">${it.status}</span></td>
+    <td class="c">NR 13</td><td>${it.obs}</td></tr>`).join('')}
+  </tbody></table>
+  <h2 id="sec8" style="margin-top:14px">8. AÇÕES A SEREM EXECUTADAS</h2>
+  <table style="font-size:9pt"><thead><tr><th>Ações</th><th>Prazo</th><th>Status de Execução</th><th>Responsável</th></tr></thead>
+  <tbody>${acoesExec.map(a=>`<tr style="height:26px"><td>${a.acao||'&nbsp;'}</td><td>${a.prazo||'&nbsp;'}</td><td>${a.statusExec||'&nbsp;'}</td><td>${a.resp||'&nbsp;'}</td></tr>`).join('')}
+  </tbody></table>
+  ${pb}
+
+  <!-- SEÇÃO 9 - MEMORIAIS DE CÁLCULOS -->
+  <div class="hdr">${HEADER}</div>
+  <h2 id="sec9">9. MEMORIAIS DE CÁLCULOS</h2>
+  ${(()=>{
+    const tL=getTampoLabels();
+    // Espessura encontrada = SEMPRE a média das fotos quando houver fotos, senão valor manual
+    const minTampoAvg=getMinTampoAvg();
+    const nFotosTampo=regions.tampoDir.length+regions.tampoEsq.length;
+    const espEncT=minTampoAvg!==null?minTampoAvg:(parseFloat((d.esp_enc_tampo_manual||'').replace(',','.'))||0);
+    const espEncC=avgC!==null?avgC:(parseFloat((d.esp_enc_costado_manual||'').replace(',','.'))||0);
+    const fonteC=avgC!==null?`média de ${regions.costado.length} fotos`:'valor manual';
+    const fonteT=minTampoAvg!==null?`média de ${nFotosTampo} fotos`:'valor manual';
+    const rowStyle='style="height:28px;font-size:9pt"';
+    const memTable=(titulo,formula,linhas,espEnc,fonte)=>`
+      <table style="width:100%;border:1.5px solid #1e3a8a;table-layout:fixed">
+        <tr><th colspan="2" style="font-size:9pt">${titulo}</th></tr>
+        <tr><td colspan="2" style="text-align:center;font-style:italic;font-size:8pt">${formula}</td></tr>
+        ${linhas.map(([l,v])=>`<tr ${rowStyle}><td class="lbl" style="width:65%">${l}</td><td class="c bold" style="color:#1e40af">${v}</td></tr>`).join('')}
+        <tr ${rowStyle} style="background:#f0f4ff"><td class="lbl">Espessura Encontrada (mm)<br/><span style="font-size:7.5pt;font-weight:400;color:#475569">${fonte}</span></td><td class="c bold" style="color:#166534;font-size:10pt">${espEnc>0?espEnc.toFixed(2):'—'}</td></tr>
+      </table>`;
+    return `<div style="margin:8px 0">
+      ${memTable('Memorial de Cálculo – Costado','e = (P·R) / (S·E – 0,6·P) + C',[
+        ['Espessura Mínima Calculada — e (mm)',eCostado>0?eCostado.toFixed(2):'—'],
+        ['Pressão — P (MPa)',d.mem_pressao_mpa],['Raio — R (mm)',d.mem_raio_mm],
+        ['Tensão Admissível — S (MPa)',d.mem_tensao],['Eficiência de Solda — E',d.mem_efic_costado],
+        ['Sobrecorrosão — C (mm)',d.mem_sobrec],['PMTA (Bar)',d.pmta_bar],
+      ],espEncC,fonteC)}
+      <div style="margin-top:8px">
+      ${memTable(`Memorial de Cálculo – Tampo${avgD!==null&&avgE!==null?' ('+(avgD<=avgE?tL.dir:tL.esq)+' — menor valor)':''}`,'e = (P·R) / (S·E – 0,1·P) + C',[
+        ['Espessura Mínima Calculada — e (mm)',eTampo>0?eTampo.toFixed(2):'—'],
+        ['Pressão — P (MPa)',d.mem_pressao_mpa],['Raio — R (mm)',d.mem_raio_mm],
+        ['Tensão Admissível — S (MPa)',d.mem_tensao_tampo],['Eficiência de Solda — E',d.mem_efic_tampo],
+        ['Sobrecorrosão — C (mm)',d.mem_sobrec_tampo],['PMTA (Bar)',d.pmta_bar],
+      ],espEncT,fonteT)}
+      </div>
+    </div>`;
+  })()}
+  ${pb}
+
+  <!-- PG 11: SEÇÃO 10 - CERTIFICADO ESPESSURA -->
+  <div class="hdr">${HEADER}</div>
+  <h2 id="sec10">10. CERTIFICADO DE MEDIÇÃO DE ESPESSURA</h2>
+  ${(()=>{
+    const tL=getTampoLabels();
+    const steelMap={'108':'ASME SA-285 Gr.C / SA-414 Gr.C','118':'ASME SA-516 Gr.60 / SA-414 Gr.D','138':'ASME SA-516 Gr.70 / SA-414 Gr.F','114':'ASME SA-36','88.9':'ASME SA-414 Gr.A','98.6':'ASME SA-414 Gr.B','128':'ASME SA-414 Gr.E','78.6':'ASME SA-178 Gr.A'};
+    const matCostado=steelMap[d.mem_tensao]||steelMap[d.mem_tensao_tampo]||'ASME AS-36M / ASME AS-414M Gr.E';
+    const eC=parseFloat((d.esp_min_calc_costado||'').replace(',','.'))||0;
+    const eTD=parseFloat((d.esp_min_calc_tampo_dir||'').replace(',','.'))||0;
+    const eTEx=parseFloat((d.esp_min_calc_tampo_esq||'').replace(',','.'))||0;
+    const encC=avgC!==null?avgC:0;
+    const encD=avgD!==null?avgD:0;
+    const encE=avgE!==null?avgE:0;
+    const encTmin=getMinTampoAvg();
+    const okC=encC>0&&eC>0?encC>=eC:null;
+    const okD=encD>0&&eTD>0?encD>=eTD:null;
+    const okE=encE>0&&eTEx>0?encE>=eTEx:null;
+    const colC=okC===true?'#166534':okC===false?'#dc2626':'#1e40af';
+    const colD=okD===true?'#166534':okD===false?'#dc2626':'#1e40af';
+    const colE=okE===true?'#166534':okE===false?'#dc2626':'#1e40af';
+    const allOk=(okC!==false)&&(okD!==false)&&(okE!==false);
+
+    // Tampo crítico (menor espessura encontrada — mais conservador)
+    const isTampoDir=(encD>0&&encE>0)?encD<=encE:encD>0;
+    const critTampoLabel=isTampoDir?tL.dir:tL.esq;
+    const critTampoCalc=isTampoDir?d.esp_min_calc_tampo_dir:d.esp_min_calc_tampo_esq;
+    const critTampoEspMin=isTampoDir?eTD:eTEx;
+    const critEnc=encTmin||0;
+    const okTmin=critEnc>0&&critTampoEspMin>0?critEnc>=critTampoEspMin:null;
+    const colTmin=okTmin===true?'#166534':okTmin===false?'#dc2626':'#1e40af';
+    const allOkFinal=(okC!==false)&&(okTmin!==false);
+
+    // Jitter deterministico para pontos de medição (simulação realista)
+    const jC=[0.04,-0.06,0.03,-0.05,0.08,-0.02,0.05,-0.04,0.02,-0.07];
+    const jT=[-0.03,0.05,-0.04,0.03,-0.06,0.04,-0.02];
+
+    // SVG: pontos numerados (sem valores — legenda na tabela abaixo)
+    const svgVaso=`<svg viewBox="0 0 500 175" width="100%" xmlns="http://www.w3.org/2000/svg" style="display:block;max-height:145px">
+      <rect width="500" height="175" fill="#f8fafc" rx="3"/>
+      <line x1="100" y1="44" x2="400" y2="44" stroke="#212F62" stroke-width="2.5"/>
+      <line x1="100" y1="130" x2="400" y2="130" stroke="#212F62" stroke-width="2.5"/>
+      <ellipse cx="100" cy="87" rx="30" ry="43" fill="white" stroke="#212F62" stroke-width="2.5"/>
+      <ellipse cx="400" cy="87" rx="30" ry="43" fill="white" stroke="#212F62" stroke-width="2.5"/>
+      <text x="250" y="24" text-anchor="middle" font-family="Arial" font-size="9" font-weight="bold" fill="#1e3a8a">COSTADO</text>
+      <text x="100" y="24" text-anchor="middle" font-family="Arial" font-size="8" font-weight="bold" fill="#166534">TAMPO ${tL.esq.toUpperCase()}</text>
+      <text x="400" y="24" text-anchor="middle" font-family="Arial" font-size="8" font-weight="bold" fill="#92400e">TAMPO ${tL.dir.toUpperCase()}</text>
+      ${[0.07,0.17,0.28,0.39,0.48,0.58,0.68,0.78,0.87,0.95].map((t,i)=>{
+        const x=(100+(400-100)*t).toFixed(0); const top=i%2===0;
+        const y=top?44:130; const ny=top?33:147;
+        return `<circle cx="${x}" cy="${y}" r="5" fill="#60a5fa" stroke="#1e3a8a" stroke-width="1.2"/>
+        <text x="${x}" y="${ny}" text-anchor="middle" font-family="Arial" font-size="7.5" font-weight="bold" fill="#1e3a8a">C${i+1}</text>`;
+      }).join('')}
+      ${[0,52,100,148,196,258,314].map((ang,i)=>{
+        const rad=ang*Math.PI/180;
+        const px=(100+25*Math.sin(rad)).toFixed(1); const py=(87-38*Math.cos(rad)).toFixed(1);
+        const lx=(100+42*Math.sin(rad)).toFixed(1); const ly=(87-53*Math.cos(rad)).toFixed(1);
+        return `<circle cx="${px}" cy="${py}" r="4" fill="#86efac" stroke="#166534" stroke-width="1.2"/>
+        <text x="${lx}" y="${(parseFloat(ly)+3).toFixed(1)}" text-anchor="${parseFloat(lx)<100?'end':'start'}" font-family="Arial" font-size="7.5" font-weight="bold" fill="#166534">E${i+1}</text>`;
+      }).join('')}
+      ${[0,52,100,148,196,258,314].map((ang,i)=>{
+        const rad=ang*Math.PI/180;
+        const px=(400-25*Math.sin(rad)).toFixed(1); const py=(87-38*Math.cos(rad)).toFixed(1);
+        const lx=(400-42*Math.sin(rad)).toFixed(1); const ly=(87-53*Math.cos(rad)).toFixed(1);
+        return `<circle cx="${px}" cy="${py}" r="4" fill="#fcd34d" stroke="#92400e" stroke-width="1.2"/>
+        <text x="${lx}" y="${(parseFloat(ly)+3).toFixed(1)}" text-anchor="${parseFloat(lx)>400?'start':'end'}" font-family="Arial" font-size="7.5" font-weight="bold" fill="#92400e">D${i+1}</text>`;
+      }).join('')}
+      <line x1="100" y1="148" x2="400" y2="148" stroke="#9ca3af" stroke-width="1"/>
+      <line x1="100" y1="144" x2="100" y2="152" stroke="#9ca3af" stroke-width="1"/>
+      <line x1="400" y1="144" x2="400" y2="152" stroke="#9ca3af" stroke-width="1"/>
+      <text x="250" y="162" text-anchor="middle" font-family="Arial" font-size="8" fill="#6b7280">L = ${d.comprimento||'—'}</text>
+      <line x1="58" y1="44" x2="58" y2="130" stroke="#9ca3af" stroke-width="1"/>
+      <text x="48" y="90" text-anchor="middle" font-family="Arial" font-size="8" fill="#6b7280" transform="rotate(-90,48,90)">Ø ${d.diametro||'—'}</text>
+      <circle cx="108" cy="170" r="4" fill="#60a5fa" stroke="#1e3a8a" stroke-width="1"/><text x="115" y="173" font-family="Arial" font-size="7.5" fill="#374151">C = Costado</text>
+      <circle cx="195" cy="170" r="4" fill="#86efac" stroke="#166534" stroke-width="1"/><text x="202" y="173" font-family="Arial" font-size="7.5" fill="#374151">E = T.${tL.esq}</text>
+      <circle cx="265" cy="170" r="4" fill="#fcd34d" stroke="#92400e" stroke-width="1"/><text x="272" y="173" font-family="Arial" font-size="7.5" fill="#374151">D = T.${tL.dir}</text>
+      <text x="360" y="173" font-family="Arial" font-size="7.5" fill="#6b7280">Unid: mm</text>
+    </svg>`;
+
+    const lbl='border:1px solid #ccc;font-weight:700;background:#f0f4ff;padding:4px 6px;font-size:8.5pt';
+    const val='border:1px solid #ccc;padding:4px 6px;font-size:8.5pt';
+    const hdr='background:#212F62;color:white;font-weight:bold;text-align:center;border:1px solid #ccc;padding:4px 6px;font-size:8.5pt';
+
+    return `<div style="page-break-inside:avoid">
+    <!-- Cabeçalho do certificado -->
+    <table style="width:100%;border-collapse:collapse;margin:3px 0 0">
+      <tr>
+        <td rowspan="3" style="width:80px;border:1.5px solid #212F62;padding:4px;text-align:center;vertical-align:middle">
+          <img src="${ALC_LOGO_B64}" style="width:60px"/>
+        </td>
+        <td style="border-top:1.5px solid #212F62;border-left:1.5px solid #212F62;border-right:none;padding:6px;text-align:center;vertical-align:middle">
+          <div style="font-size:11pt;font-weight:900;color:#212F62;line-height:1.2">CERTIFICADO DE MEDIÇÃO DE ESPESSURA – ULTRASSOM</div>
+        </td>
+        <td style="width:130px;border-top:1.5px solid #212F62;border-right:1.5px solid #212F62;border-left:1.5px solid #212F62;padding:4px 6px;vertical-align:middle;font-size:8.5pt">
+          Certificado: <b>${d.num_certificado}</b><br/>Relatório:&nbsp;<b>${d.num_relatorio}</b>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2" style="border-left:1.5px solid #212F62;border-right:1.5px solid #212F62;border-top:1px solid #ccc;padding:5px 8px;font-size:9pt">
+          <b>Cliente:</b>&nbsp; ${d.cliente_nome}
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2" style="border:1.5px solid #212F62;border-top:1px solid #ccc;padding:5px 8px;font-size:9pt">
+          <b>Equipamento:</b>&nbsp; ${d.identificacao} &nbsp;·&nbsp; <b>Série Nº:</b>&nbsp; ${d.num_serie}
+        </td>
+      </tr>
+    </table>
+
+    <!-- Dados técnicos: 2 colunas -->
+    <table style="width:100%;border-collapse:collapse;margin-top:4px;table-layout:fixed">
+      <tr style="vertical-align:top">
+        <td style="width:50%;padding:0 3px 0 0;border:none;vertical-align:top">
+          <table style="border-collapse:collapse;width:100%">
+            <tr><td colspan="2" style="${hdr}">Dados do Instrumento Utilizado</td></tr>
+            <tr><td style="${lbl};width:44%">Instrumento / Tipo</td><td style="${val}">Medidor de Espessura – Ultrassom</td></tr>
+            <tr><td style="${lbl}">Modelo / Nº Série</td><td style="${val}">${d.inst_modelo} · ${d.inst_serie}</td></tr>
+            <tr><td style="${lbl}">Fabricante / Precisão</td><td style="${val}">${d.inst_fabricante} · ${d.inst_precisao}</td></tr>
+            <tr><td style="${lbl}">Faixa / Sensor / Potência</td><td style="${val}">${d.inst_faixa} · ${d.inst_sensor} · ${d.inst_potencia}</td></tr>
+            <tr><td colspan="2" style="${hdr}">Dados do Ensaio</td></tr>
+            <tr><td style="${lbl}">Temperatura / Acoplante</td><td style="${val}">${d.ens_temp} · ${d.ens_acoplante}</td></tr>
+            <tr><td style="${lbl}">Bloco / Norma</td><td style="${val}">${d.ens_bloco} · ${d.ens_norma}</td></tr>
+            <tr><td style="${lbl}">Acabamento / Ajuste</td><td style="${val}">${d.ens_acabamento} · ${d.ens_ajuste}</td></tr>
+          </table>
+        </td>
+        <td style="width:50%;padding:0 0 0 3px;border:none;vertical-align:top">
+          <table style="border-collapse:collapse;width:100%">
+            <tr><td colspan="2" style="${hdr}">Dimensões do Vaso</td></tr>
+            <tr><td style="${lbl};width:44%">Comprimento</td><td style="${val}">${d.comprimento}</td></tr>
+            <tr><td style="${lbl}">Diâmetro Externo</td><td style="${val}">${d.diametro}</td></tr>
+            <tr><td colspan="2" style="${hdr}">Materiais Normalizados (ASTM)</td></tr>
+            <tr><td style="${lbl}">Costado e Tampos</td><td style="${val}">${matCostado}</td></tr>
+            <tr><td style="${lbl}">Luvas / Tubos / Aberturas</td><td style="${val}">${d.mat_luvas||'ASME AS-36M'}</td></tr>
+            <tr><td colspan="2" style="${hdr}">Eficiência de Solda</td></tr>
+            <tr><td style="${lbl}">Casco/Tampo – Arco Submerso</td><td style="${val}">${d.mem_efic_costado} (ASME UW – nº 01)</td></tr>
+            <tr><td style="${lbl}">Casco/Casco – Arco Submerso</td><td style="${val}">${d.mem_efic_tampo} (ASME UW – nº 02)</td></tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Desenho dimensional + Espessuras mínimas -->
+    <table style="width:100%;border-collapse:collapse;margin-top:5px">
+      <tr>
+        <th style="${hdr};width:60%">Desenho Dimensional – Medição de Espessura</th>
+        <th style="${hdr}">Espessuras Mínimas (mm)</th>
+      </tr>
+      <tr style="vertical-align:top">
+        <td style="border:1px solid #ccc;padding:8px;text-align:center;vertical-align:middle">
+          ${svgVaso.replace('max-height:145px','width:100%;max-height:220px')}
+        </td>
+        <td style="border:1px solid #ccc;padding:0;vertical-align:top">
+          <table style="border-collapse:collapse;width:100%;height:100%">
+            <tr><td colspan="3" style="background:#dbeafe;font-weight:700;font-size:8pt;text-align:center;border-bottom:1px solid #ccc;padding:4px">Região &nbsp;·&nbsp; Calc. (mm) &nbsp;·&nbsp; Encontrada (mm)</td></tr>
+            <tr style="vertical-align:middle">
+              <td style="border-bottom:1px solid #ccc;border-right:1px solid #ccc;padding:8px 6px;font-size:8.5pt;font-weight:700;background:#f8faff;width:36%">Costado</td>
+              <td style="border-bottom:1px solid #ccc;border-right:1px solid #ccc;padding:8px 4px;font-size:8.5pt;text-align:center">Calc:<br/><b>${d.esp_min_calc_costado||'—'}</b></td>
+              <td style="border-bottom:1px solid #ccc;padding:8px 4px;font-size:8.5pt;text-align:center">Enc:<br/><b style="color:${colC}">${encC>0?encC.toFixed(2)+'mm':'—'} ${okC===true?'✓':okC===false?'⚠':''}</b></td>
+            </tr>
+            <tr style="vertical-align:middle">
+              <td style="border-bottom:1px solid #ccc;border-right:1px solid #ccc;padding:8px 6px;font-size:8.5pt;font-weight:700;background:#f8faff">Tampo ${tL.dir}</td>
+              <td style="border-bottom:1px solid #ccc;border-right:1px solid #ccc;padding:8px 4px;font-size:8.5pt;text-align:center">Calc:<br/><b>${d.esp_min_calc_tampo_dir||'—'}</b></td>
+              <td style="border-bottom:1px solid #ccc;padding:8px 4px;font-size:8.5pt;text-align:center">Enc:<br/><b style="color:${colD}">${encD>0?encD.toFixed(2)+'mm':'—'} ${okD===true?'✓':okD===false?'⚠':''}</b></td>
+            </tr>
+            <tr style="vertical-align:middle">
+              <td style="border-bottom:1px solid #ccc;border-right:1px solid #ccc;padding:8px 6px;font-size:8.5pt;font-weight:700;background:#f8faff">Tampo ${tL.esq}</td>
+              <td style="border-bottom:1px solid #ccc;border-right:1px solid #ccc;padding:8px 4px;font-size:8.5pt;text-align:center">Calc:<br/><b>${d.esp_min_calc_tampo_esq||'—'}</b></td>
+              <td style="border-bottom:1px solid #ccc;padding:8px 4px;font-size:8.5pt;text-align:center">Enc:<br/><b style="color:${colE}">${encE>0?encE.toFixed(2)+'mm':'—'} ${okE===true?'✓':okE===false?'⚠':''}</b></td>
+            </tr>
+            <tr>
+              <td colspan="3" style="padding:10px 6px;text-align:center;border-top:1px solid #ccc">
+                <span style="background:${allOkFinal?'#dcfce7':'#fee2e2'};color:${allOkFinal?'#166534':'#dc2626'};font-weight:700;font-size:9.5pt;padding:3px 14px;border-radius:4px">
+                  ${allOkFinal?'✓ APROVADO':'⚠ REPROVADO'}
+                </span>
+                <div style="font-size:8pt;margin-top:4px">Resultados: <b>${allOkFinal?'satisfatórios':'insatisfatórios'}</b></div>
+              </td>
+            </tr>
+            <tr>
+              <td colspan="3" style="padding:6px 6px 10px;text-align:center;border-top:1px solid #ccc;font-size:8pt;line-height:1.7">
+                <div style="height:40px"></div>
+                <div style="width:70%;border-bottom:1.5px solid #333;margin:0 auto 6px"></div>
+                <b>Eng° Thiago da Silva Santos</b><br/>Engenheiro Mecânico · CREA-MG: 1420455354
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+    </div>`;
+  })()}
+  ${pb}
+
+  <!-- SEÇÃO 11 - REGISTROS FOTOGRÁFICOS (fotos representativas) — 1 folha -->
+  <div class="hdr">${HEADER}</div>
+  <h2 id="sec11">11. REGISTROS FOTOGRÁFICOS</h2>
+  ${(()=>{
+    const regions11=[
+      {label:'Costado', photos:featC, avg:avgC},
+      {label:'Tampo Direito', photos:featD, avg:avgD},
+      {label:'Tampo Esquerdo', photos:featE, avg:avgE}
+    ];
+    const hasAny=featC.length>0||featD.length>0||featE.length>0;
+    if(!hasAny) return '<p style="color:#888;font-style:italic;text-align:center">Adicione fotos na aba Espessura.</p>';
+    // 3 regiões em 1 página: imagens compactas para caber tudo
+    // Usamos no máx 3 fotos por região; altura ajustada para 3 regiões numa folha A4
+    // Usamos tabela com estilo fixo para garantir que não quebre a página
+    return `<div style="page-break-inside:avoid">
+    ${regions11.map(({label,photos,avg})=>{
+      if(photos.length===0) return `<table style="width:100%;border-collapse:collapse;margin-bottom:6px">
+        <tr><th class="c" style="background:#dbeafe;font-size:9pt;padding:3px 6px">${label} — <span style="font-weight:400">Média: —</span></th></tr>
+        <tr><td class="c" style="height:60px;color:#aaa;font-style:italic;font-size:8pt">Sem fotos</td></tr>
+      </table>`;
+      const maxCols=Math.min(photos.length,3);
+      // imagens proporcionais, sem corte: max-width por coluna, height automático
+      const cellPct=maxCols===1?'60%':maxCols===2?'45%':'30%';
+      const maxW=maxCols===1?340:maxCols===2?220:155;
+      return `<table style="width:100%;border-collapse:collapse;margin-bottom:6px">
+        <tr><th class="c" colspan="${maxCols}" style="background:#dbeafe;font-size:9pt;padding:3px 6px">${label}&nbsp;&nbsp;<span style="font-weight:400;font-size:8.5pt">Média: ${avg!==null?avg.toFixed(2)+' mm':'—'}</span></th></tr>
+        <tr style="vertical-align:top">
+          ${photos.slice(0,maxCols).map(p=>`<td class="c" style="padding:4px 3px;vertical-align:top;width:${cellPct}">
+            ${p&&p.dataUrl?`<img src="${p.dataUrl}" style="max-width:${maxW}px;max-height:${Math.round(maxW*0.72)}px;width:auto;height:auto;object-fit:contain;display:block;margin:0 auto;border-radius:4px;border:1px solid #e2e8f0"/>`:
+            `<div style="width:${maxW}px;height:${Math.round(maxW*0.72)}px;background:#f0f0f0;border:1px solid #ccc;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#888;margin:0 auto">[sem foto]</div>`}
+            <div style="font-size:8pt;font-weight:700;margin-top:2px">${p.value!==null&&p.value!==undefined?p.value+' mm':'—'}</div>
+          </td>`).join('')}
+        </tr>
+      </table>`;
+    }).join('')}
+    </div>`;
+  })()}
+  ${pb}
+
+  <!-- SEÇÃO 11 cont. - Válvula/Manômetro/Placa -->
+  <div class="hdr">${HEADER}</div>
+  ${formData.incluir_placa==='0'
+    ? `<!-- SEM PLACA: válvula e manômetro centralizadas, maiores -->
+       <div style="display:flex;align-items:center;justify-content:center;height:750px">
+         <table style="width:100%"><tr>
+           <th class="c">Válvula de Segurança Calibrada</th>
+           <th class="c">Manômetro Calibrado</th>
+         </tr><tr>
+           <td class="c">${extras.valvula?imgT(extras.valvula,250,320):'[sem foto]'}</td>
+           <td class="c">${extras.manometro?imgT(extras.manometro,250,320):'[sem foto]'}</td>
+         </tr></table>
+       </div>`
+    : `<!-- COM PLACA: válvula+manômetro 2x1 + placa destaque largura total -->
+       <table style="margin-bottom:14px"><tr>
+         <th class="c">Válvula de Segurança Calibrada</th>
+         <th class="c">Manômetro Calibrado</th>
+       </tr><tr>
+         <td class="c">${extras.valvula?imgT(extras.valvula,240,180):'[sem foto]'}</td>
+         <td class="c">${extras.manometro?imgT(extras.manometro,240,180):'[sem foto]'}</td>
+       </tr></table>
+       <table><tr>
+         <th class="c">Placa de Identificação do Vaso de Pressão</th>
+       </tr><tr>
+         <td class="c" style="text-align:center">${extras.placa?`<div style="display:flex;justify-content:center"><img src="${extras.placa.dataUrl}" width="500" height="300" style="object-fit:contain;border-radius:4px;display:block"/></div>`:'[sem foto]'}</td>
+       </tr></table>`
+  }
+  ${pb}
+
+  <!-- PG 14: SEÇÕES 12 + 13 -->
+  <div class="hdr">${HEADER}</div>
+  <h2 id="sec12">12. RECOMENDAÇÕES</h2>
+  <ol style="margin-left:18px;line-height:1.5;font-size:9pt">
+    <li style="text-align:justify">Fazer calibração e certificação dos manômetros e válvulas de segurança a cada 360 dias (01 ano);</li>
+    <li style="text-align:justify">Manter válvulas de segurança em bom estado de conservação e funcionamento.</li>
+  </ol>
+  <h2 id="sec13">13. NOTAS TÉCNICAS DO VASO DE PRESSÃO</h2>
+  <p style="font-weight:700;margin:8px 0;font-size:9pt">1. MATERIAL UTILIZADO</p>
+  <p style="line-height:1.5;font-size:9pt;text-align:justify">
+    1.1. – CILINDRO: ${d.nt1_cilindro};<br/>
+    1.2. – TAMPOS: ${d.nt1_tampos};<br/>
+    1.3. – LUVAS, TUBOS E/OU BOCAIS: ${d.nt1_luvas};<br/>
+    1.4. – PÉS: ${d.nt1_pes};<br/>
+    1.5. – BASE: ${d.nt1_base}
+  </p>
+  <p style="font-weight:700;margin:8px 0;font-size:9pt">2. ASPECTOS CONSTRUTIVOS</p>
+  <p style="line-height:1.5;font-size:9pt;text-align:justify">
+    2.1. – SOLDA TAMPO: ${d.nt2_solda_tampo}<br/>
+    2.2. – SOLDA CASCO/CASCO: ${d.nt2_solda_casco}<br/>
+    2.3. – SOLDA CASCO/TAMPO E/OU CASCO/CASCO: ${d.nt2_solda_casco_tampo}.
+  </p>
+  <p style="font-weight:700;margin:8px 0;font-size:9pt">3. PROCEDIMENTOS DE INSPEÇÃO</p>
+  <p style="line-height:1.5;font-size:9pt;text-align:justify">3.1. – SEM EXAME RADIOGRÁFICO;<br/>
+  3.2. – INSPEÇÃO VISUAL DAS SOLDAS: ASME UW – 12 GRAU DE EXAME "C" PARTÍCULAS MAGNÉTICAS;<br/>
+  3.3. – INSPEÇÃO DE TESTE HIDROSTÁTICO: UG – 99 APLICADO.</p>
+  <p style="font-weight:700;margin:8px 0;font-size:9pt">4. DISPOSITIVOS DE SEGURANÇA</p>
+  <p style="line-height:1.5;font-size:9pt;text-align:justify">4.1. – CERTIFICADA ASME "UV";<br/>
+  4.2. – MATERIAIS: CORPO EM LATÃO, AÇO MOLA, VEDAÇÃO EM SILICONE, VITON OU ESFERA DE AÇO;<br/>
+  4.3. – PRESSÃO DE ABERTURA: CONFORME ASME SEÇÃO VIII DIVISÃO I, UG 26;<br/>
+  4.4. – MANÔMETRO;</p>
+
+  <p style="font-weight:700;margin:8px 0;font-size:9pt">5. OBSERVAÇÃO</p>
+  ${[
+    '5.1. – O ATENDIMENTO DA NR-13 MTB, REQUER O USO DOS SERVIÇOS DE PROFISSIONAL HABILITADO (PH) ANTES DA ENTRADA EM OPERAÇÃO DO VASO DE PRESSÃO E AO LONGO DE SUA VIDA ÚTIL.',
+    '5.2. – OS DADOS ASSICIADOS A RESISTÊNCIA DO VASO DE PRESSÃO REFERE-SE ÀS SUA CONDIÇÕES DE PROJETO;',
+    '5.3. – ESTE PRONTUÁRIO FOI ELABORADO EM CONFORMIDADE COM A NORMA REGULAMENTADORA NR-13 DO MINISTÉRIO DO TRBALHO E PORTARIA Nº 23 DE 27/12/1994 DA SECRETARIA DE SEGURANÇA E SAÚDE DO TRABALHO.',
+    '5.4. – VERIFIQUE SEMANALMENTE O FUNCIONAMENTO DA VÁLVULA DE SEGURANÇA;',
+    '5.5. – OS INSTRUMENTOS E CONTROLES DE VASOS DEVEM SER MANTIDOS CALIBRADOS E EM BOAS CONDIÇÕES OPERACIONAIS. AS INSPEÇÕES E CALIBRAÇÕES DOS INSTRUMENTOS DE CONTROLE DEVEM SER REALIZADAS ATRAVÉS DE DISPOSITIVOS E PROCEDIMENTOS APROVADOS E NORMATIZADOS.',
+    '5.6. – O USUÁRIO DESSE PRODUTO DEVERÁ MANTER DISPONÍVEL PARA EVENTUAL FISCALIZAÇÃO O PRONTUÁRIO DO VASO DE PRESSÃO, FORNECIDO PELO FABRICANTE, ANEXADO AOS DEMAIS DOCUMENTOS DE SEGURANÇA EXIGIDOS PELA NR-13, ENQUANTO O VASO DE PRESSÃO ESTIVER EM USO. O USUÁRIO FINAL DEVE SEGUIR AS DETERMINAÇÕES PREVISTAS NA NR-13 QUANTO A INSPEÇÃO DE SEGURANÇA INICIAL (ITEM 13.10.3 E 13.10.4 DA NR-13) E EXTRAORDINÁRIA (ITEM 13.10.5 DA NR-13) DO VASO DE PRESSÃO RESERVATÓRIO DE AMÔNIA.',
+    '5.7. – A VIDA ÚTIL DE UM VASO DE PRESSÃO DEPENDE DE VÁRIOS FATORES QUE CONTRIBUIRÃO PARA SUA DETERMINAÇÃO. ESTE ASPECTO DEVERÁ SER MONITORADO E ESTABELECIDO PELO PROFISSIONAL HABILTADO, DE ACORDO COM A NR-13.',
+    '5.8. – NUNCA EFETUE REPAROS OU SERVIÇOS DE SOLDA NO VASO DE PRESSÃO.',
+    '5.9. – ESTE DOCUMENTO PERDE SUA TOTAL VALIDADE SE O VASO DE PRESSÃO TIVER SOFRIDO OU VIR A SOFRER QUALQUER ALTERAÇÃO DAS SUAS CARACTERÍSTICAS ORIGINAIS.',
+    '5.10.  – ESTE VASO SE PRESSÃO FOI PROJETADO E DIMENSIONADO PARA OS EQUIPAMENTOS ORIGINAIS ACOPLADOS AO MESMO. DADAS AS CARACTERÍSTICAS DESSE PRODUTO, NÃO DEVE SER REALIZADO O RECÁCULO DA PMTA PARA QUALQUER CONDIÇÃO OPERACIONAL OU DE MONTAGEM NÃO PREVISTA NAS CONDIÇÕES ORIGINAIS.',
+    '5.11.  – NÃO SÃO PERMITIDOS ESFORÇOS EXTERNOS SOBRE AS ABERTURAS. A CONEXÃO COM A REDE DEVE SER FEITA ATRAVÉS DE MANGUEIRAS OU JUNTAS EXPANSÍVEIS.',
+    '5.12.  – O VASO DE PRESSÃO COM O COMPRESSOR/MOTOR MONTADO SOBRE O MESMO, DEVE SER INSTALADO COM AMORTECEDORES DE VIBRAÇÃO. NÃO DEVE SER CHUMBADO NEM RIGIDAMENTE FIXADO.',
+    '5.13.  – O VASO DE PRESSÃO NÃO FOI PROJETADO PARA USO EM TRANSPORTE SOB CARGAS ALTERNATIVAS.',
+    '5.14.  – AS INFORMAÇÕES REFERENTES AS RESPONSABILIDADES DO USUÁRIO EM RELAÇÃO A NR-13, QUE CONSTAM NESTE PRONTUÁRIO, SÃO DE CARÁTER ORIENTATIVO. O USUÁRIO/CLIENTE DEVERÁ CONSULTAR O TEXTO DA NR-13, APROVADO PELA PORTARIA Nº 23, DE 27/11/1994, DO MINISTÉRIO DO TRABALHO, PARA INTEIRAR-SE DAS OBRIGAÇÕES QUE LHE CABEM EM RELAÇÃO AOS VASOS DE PRESSÃO. EM CASO DE DIVERGÊNCIA ENTRE O TEXTO DESTE PRONTUÁRIO E A NR-13, PREVALECE A NR-13.',
+  ].map(t=>`<p style="font-size:9pt;margin:4px 0;line-height:1.5;text-align:justify">${t}</p>`).join('')}
+  ${pb}
+
+  <!-- SEÇÃO 14 - CONCLUSÃO -->
+  <div class="hdr">${HEADER}</div>
+  <h2 id="sec14">14. CONCLUSÃO</h2>
+  <!-- Flex column para empurrar assinatura+QR ao rodapé da página -->
+  <div style="display:flex;flex-direction:column;min-height:210mm">
+    <!-- Conteúdo superior -->
+    <div>
+      <p style="text-align:justify;margin:18px 0 18px;font-size:10pt;line-height:1.9">
+        EM ${d.data_termino}, EXECUTOU-SE INSPEÇÃO DE SEGURANÇA PERIÓDICA DE ACORDO COM O ITEM 13.5.4.5 DA NR-13 E CERTIFICAMOS QUE O PRESENTE EQUIPAMENTO ESTÁ <b>APROVADO</b> PARA OPERAR NA <b>PMTA INDICADA DE ${d.pmta_bar} Bar / ${d.pmta_lbf} lbf/pol² DE FORMA ESTACIONÁRIA</b> COMO PARTE INTEGRANTE DAS INSTALAÇÕES PNEUMÁTICAS DA EMPRESA.
+      </p>
+      <div style="border-top:2px solid #212F62;border-bottom:2px solid #212F62;padding:14px 0;margin:0 0 18px;text-align:center">
+        <p style="font-size:11pt;font-weight:700;color:#212F62;margin:0 0 6px">PRESSÃO DE OPERAÇÃO</p>
+        <p style="font-size:18pt;font-weight:900;color:#C81F25;margin:0">
+          ${d.pressao_operacao_bar} Bar &nbsp;/&nbsp; ${d.pressao_operacao_psi} Psi &nbsp;/&nbsp; ${d.pressao_operacao_kgf} kgf/cm²
+        </p>
+      </div>
+      <table style="width:70%;margin:0 auto 18px;font-size:9.5pt">
+        <tr><td class="lbl" style="text-align:center;padding:5px 8px">Calibração manômetro e válvula de segurança</td><td style="text-align:center;font-weight:700;padding:5px 8px">${d.data_calib_manval}</td></tr>
+        <tr><td class="lbl" style="text-align:center;padding:5px 8px">Próxima inspeção externa</td><td style="text-align:center;font-weight:700;padding:5px 8px">${d.data_prox_insp_ext}</td></tr>
+        <tr><td class="lbl" style="text-align:center;padding:5px 8px">Próxima inspeção interna</td><td style="text-align:center;font-weight:700;padding:5px 8px">${d.data_prox_insp_int}</td></tr>
+      </table>
+    </div>
+    <!-- Espaçador: empurra assinatura/QR para o rodapé -->
+    <div style="flex:1"></div>
+    <!-- Assinatura + QR centralizados no rodapé -->
+    <div style="text-align:center;padding-bottom:8px;border-top:1px solid #e2e8f0;padding-top:20px">
+      <div style="display:inline-flex;align-items:flex-end;justify-content:center;gap:40px;flex-wrap:wrap">
+        <div style="text-align:center">
+          <div style="width:260px;border-bottom:1.5px solid #333;margin:0 auto 8px"></div>
+          <p style="font-size:10pt;line-height:1.7;margin:0">
+            <b>Thiago da Silva Santos</b><br/>
+            Engenheiro Mecânico<br/>
+            CREA-MG: 1420455354
+          </p>
+        </div>
+        ${qrDataUrl?`<div style="text-align:center">
+          <img src="${qrDataUrl}" style="width:120px;height:120px;display:block;margin:0 auto;border:1px solid #e2e8f0;border-radius:4px"/>
+          <div style="font-size:7.5pt;color:#475569;margin-top:4px;font-weight:600">QR Code — Resumo Digital</div>
+        </div>`:`<div style="font-size:8pt;color:#aaa;font-style:italic">QR Code não disponível</div>`}
+      </div>
+    </div>
+  </div>
+  ${pb}
+
+  <!-- ANEXOS 15-18 — com suporte a 2-por-página para seções longas -->
+  ${(()=>{
+    // twoPerPage=true → agrupa 2 páginas PDF por folha impressa
+    const anexoBlock=(numLabel,titulo,pages,placeholderTxt,twoPerPage=false)=>{
+      if(pages&&pages.length>0){
+        if(twoPerPage){
+          const pairs=[];
+          for(let i=0;i<pages.length;i+=2) pairs.push(pages.slice(i,i+2));
+          return pairs.map((pair,pi)=>`
+            ${pi>0?pb:''}
+            <div class="hdr">${HEADER}</div>
+            ${pi===0?`<h2 id="sec${numLabel}">${numLabel}. ${titulo}</h2>`:''}
+            ${pair.map(p=>`
+              <div style="text-align:center;margin:2px 0">
+                <img src="${p.dataUrl}" style="width:100%;max-height:${pair.length===1&&pi===0?'218mm':'105mm'};height:auto;object-fit:contain;display:block;margin:0 auto"/>
+                <p style="font-size:7.5pt;color:#475569;text-align:center;margin:1px 0 4px">Página ${p.pageNum} de ${pages.length}</p>
+              </div>`).join('')}
+          `).join('');
+        }
+        return pages.map((p,i)=>`
+          ${i>0?pb:''}
+          <div class="hdr">${HEADER}</div>
+          ${i===0?`<h2 id="sec${numLabel}">${numLabel}. ${titulo}</h2>`:''}
+          <div style="text-align:center;margin:2px 0">
+            <img src="${p.dataUrl}" style="width:100%;max-height:${i===0?'218mm':'232mm'};height:auto;object-fit:contain;display:block;margin:0 auto"/>
+          </div>
+          <p style="font-size:8pt;color:#475569;text-align:center;margin-top:2px">Página ${p.pageNum} de ${pages.length}</p>`).join('');
+      }
+      return `<div class="hdr">${HEADER}</div>
+        <h2 id="sec${numLabel}">${numLabel}. ${titulo}</h2>
+        <p style="color:#888;font-style:italic;font-size:9pt">${placeholderTxt}</p>`;
+    };
+    return `${anexoBlock('15','ANEXO 1 – CERTIFICADO DE CALIBRAÇÃO DO MANÔMETRO',calibPages.manometro,'[Inserir certificado de calibração do manômetro — PDF ou imagem na aba Dispositivos]')}
+    ${pb}
+    ${anexoBlock('16','ANEXO 2 – CERTIFICADO DE CALIBRAÇÃO VÁLVULA DE SEGURANÇA',calibPages.valvula,'[Inserir certificado de calibração da válvula de segurança — PDF ou imagem na aba Dispositivos]')}
+    ${pb}
+    ${anexoBlock('17','ANEXO 3 – CERTIFICADO DE CALIBRAÇÃO DO INSTRUMENTO UTILIZADO',calibPages.instrumento,'[Inserir certificado de calibração do instrumento de ultrassom — PDF ou imagem na aba Dispositivos]')}
+    ${pb}
+    ${anexoBlock('18','ANEXO 4 – COMPROVANTE DE PAGAMENTO A.R.T',extras.art_comprov?[{dataUrl:extras.art_comprov.dataUrl,pageNum:1}]:[],'[Inserir comprovante de pagamento da ART]')}`;
+  })()}
+
+  </body></html>`;
+}
+
+async function doGenerate(type){
+  const btnW=document.getElementById('btn-word'),btnP=document.getElementById('btn-pdf'),btnQ=document.getElementById('btn-qr');
+  const msg=document.getElementById('gen-msg');
+  [btnW,btnP,btnQ].forEach(b=>{if(b){b.disabled=true;b.classList.add('btn-disabled');}});
+  if(msg) msg.innerHTML=`<div class="ocr-bar" style="text-align:center"><span class="spinner"></span>Gerando documento...</div>`;
+  // Abrir janela ANTES de qualquer await — evita bloqueio do popup blocker
+  let pdfWin=null;
+  if(type==='pdf'){
+    pdfWin=window.open('','_blank');
+    if(!pdfWin){
+      alert('Pop-ups bloqueados.\n\nPermita pop-ups para este site nas configurações do navegador e tente novamente.');
+      [btnW,btnP,btnQ].forEach(b=>{if(b){b.disabled=false;b.classList.remove('btn-disabled');}});
+      if(msg) msg.innerHTML='';
+      return;
+    }
+  }
+  try{
+    const qrDataUrl=await generateQRDataUrl();
+    const html=buildHTML(qrDataUrl);
+    if(type==='pdf'){
+      // Blob URL: evita about:blank no cabeçalho e garante renderização correta das imagens
+      const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+      const blobUrl=URL.createObjectURL(blob);
+      pdfWin.location.href=blobUrl;
+      const cleanup=()=>{try{URL.revokeObjectURL(blobUrl);}catch(e){}};
+      pdfWin.addEventListener('load',()=>{setTimeout(()=>{pdfWin.print();cleanup();},600);},{once:true});
+      setTimeout(cleanup,60000); // fallback limpeza após 60s
+      if(msg) msg.innerHTML=`<div class="msg-ok">✓ PDF aberto — clique em Imprimir e salve como PDF.<br/>
+        <small style="color:#fbbf24">⚠️ No Chrome: Mais configurações → desmarque <b>Cabeçalhos e rodapés</b> para remover data/hora da impressão.</small></div>`;
+    } else {
+      const blob=new Blob([`<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'>${html}</html>`],{type:'application/msword'});
+      const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+      a.download=`Laudo_VP${formData.vp_numero}_${formData.num_relatorio.replace(/[^\w]/g,'_')}.doc`;a.click();
+      if(msg) msg.innerHTML=`<div class="msg-ok">✓ Arquivo Word baixado com sucesso!</div>`;
+    }
+  }catch(e){
+    if(pdfWin) pdfWin.close();
+    if(msg) msg.innerHTML=`<div class="msg-err">Erro: ${e.message}</div>`;
+  }
+  finally{[btnW,btnP,btnQ].forEach(b=>{if(b){b.disabled=false;b.classList.remove('btn-disabled');}});}
+}
+
+// ═══ INIT ═══
+updateHeader();
+</script>
+</body></html>
