@@ -210,15 +210,11 @@
     document.getElementById('err').style.display = 'none';
     try {
       const provider = new firebase.auth.GoogleAuthProvider();
-      // Popup em desktop; redirect em mobile
-      if (/Mobi|Android/i.test(navigator.userAgent)) {
-        await auth.signInWithRedirect(provider);
-      } else {
-        const result = await auth.signInWithPopup(provider);
-        await handleGoogleUser(result.user);
-      }
+      provider.setCustomParameters({ prompt: 'select_account' });
+      const result = await auth.signInWithPopup(provider);
+      await handleGoogleUser(result.user);
     } catch(e) {
-      if (e.code === 'auth/popup-closed-by-user') return;
+      if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return;
       showError('Erro ao entrar com Google. Tente novamente.');
     }
   }
