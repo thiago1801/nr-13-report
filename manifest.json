@@ -1,0 +1,25 @@
+{
+  "name": "ALC Compressores — Laudos",
+  "short_name": "ALC Laudos",
+  "description": "Sistema de Inspeção e Laudos NR-13 — ALC Compressores",
+  "start_url": "/nr-13-report/login.html",
+  "display": "standalone",
+  "background_color": "#212F62",
+  "theme_color": "#212F62",
+  "orientation": "portrait-primary",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
