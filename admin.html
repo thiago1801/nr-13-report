@@ -227,6 +227,10 @@
       <input type="text" id="f-username" placeholder="Ex: joao.silva" autocapitalize="none">
     </div>
     <div class="field">
+      <label>E-mail Google <span style="font-weight:400;color:#94a3b8">(opcional — para login com Google)</span></label>
+      <input type="email" id="f-email" placeholder="Ex: joao@gmail.com" autocapitalize="none">
+    </div>
+    <div class="field">
       <label>Senha</label>
       <input type="password" id="f-password" placeholder="Mínimo 6 caracteres">
     </div>
@@ -331,6 +335,7 @@
     document.getElementById('modal-title').textContent = user ? 'Editar Usuário' : 'Novo Usuário';
     document.getElementById('f-name').value     = user ? (user.name||'') : '';
     document.getElementById('f-username').value = user ? (user.username||'') : '';
+    document.getElementById('f-email').value    = user ? (user.email||'') : '';
     document.getElementById('f-password').value = '';
     document.getElementById('f-password').placeholder = user ? 'Deixe em branco para não alterar' : 'Mínimo 6 caracteres';
     document.getElementById('f-role').value     = user ? (user.role||'campo') : 'campo';
@@ -352,6 +357,8 @@
     const btn      = document.getElementById('btn-save');
 
     errEl.style.display = 'none';
+
+    const googleEmail = document.getElementById('f-email').value.trim().toLowerCase();
 
     if (!name || !username) { showModalErr('Preencha nome e usuário.'); return; }
     if (!editingUid && password.length < 6) { showModalErr('Senha deve ter pelo menos 6 caracteres.'); return; }
@@ -383,6 +390,7 @@
         // Salva perfil no Firestore
         await db.collection('users').doc(cred.user.uid).set({
           username, name, role, active: true,
+          email: googleEmail || null,
           createdAt: firebase.firestore.FieldValue.serverTimestamp(),
           createdBy: session.uid
         });

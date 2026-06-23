@@ -26,64 +26,56 @@
       box-shadow: 0 24px 64px rgba(0,0,0,0.35);
     }
 
-    /* ── Logo ── */
-    .logo-area {
-      text-align: center;
-      margin-bottom: 32px;
-    }
+    .logo-area { text-align: center; margin-bottom: 28px; }
     .logo-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
+      display: inline-flex; align-items: center; justify-content: center;
       width: 72px; height: 72px;
-      background: #212F62;
-      border-radius: 18px;
-      margin-bottom: 14px;
+      background: #212F62; border-radius: 18px; margin-bottom: 14px;
     }
     .logo-badge svg { width: 44px; height: 44px; }
-    .logo-area h1 {
-      font-size: 20px;
-      font-weight: 800;
-      color: #212F62;
-      letter-spacing: -0.3px;
-    }
-    .logo-area p {
-      font-size: 13px;
-      color: #64748b;
-      margin-top: 4px;
+    .logo-area h1 { font-size: 20px; font-weight: 800; color: #212F62; }
+    .logo-area p  { font-size: 13px; color: #64748b; margin-top: 4px; }
+
+    .error-box {
+      background: #fef2f2; border: 1.5px solid #fecaca;
+      color: #dc2626; border-radius: 10px;
+      padding: 10px 14px; font-size: 13px;
+      margin-bottom: 16px; display: none;
     }
 
-    /* ── Error box ── */
-    .error-box {
-      background: #fef2f2;
-      border: 1.5px solid #fecaca;
-      color: #dc2626;
-      border-radius: 10px;
-      padding: 10px 14px;
-      font-size: 13px;
-      margin-bottom: 18px;
-      display: none;
+    /* ── Google button ── */
+    .btn-google {
+      width: 100%; padding: 13px 14px;
+      background: #fff; color: #374151;
+      border: 1.5px solid #e2e8f0; border-radius: 10px;
+      font-size: 14px; font-weight: 600;
+      cursor: pointer; display: flex; align-items: center;
+      justify-content: center; gap: 10px;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      margin-bottom: 20px;
+      font-family: inherit;
+    }
+    .btn-google:hover { border-color: #94a3b8; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .btn-google img { width: 20px; height: 20px; }
+
+    /* ── Divisor ── */
+    .divider {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 18px; color: #94a3b8; font-size: 12px;
+    }
+    .divider::before, .divider::after {
+      content: ''; flex: 1; height: 1px; background: #e2e8f0;
     }
 
     /* ── Fields ── */
-    .field { margin-bottom: 16px; }
-    .field label {
-      display: block;
-      font-size: 13px;
-      font-weight: 600;
-      color: #374151;
-      margin-bottom: 6px;
-    }
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 5px; }
     .field input {
-      width: 100%;
-      padding: 13px 14px;
-      border: 1.5px solid #e2e8f0;
-      border-radius: 10px;
-      font-size: 15px;
-      color: #111;
-      outline: none;
+      width: 100%; padding: 12px 14px;
+      border: 1.5px solid #e2e8f0; border-radius: 10px;
+      font-size: 15px; color: #111; outline: none;
       transition: border-color 0.15s, box-shadow 0.15s;
-      background: #fafafa;
+      background: #fafafa; font-family: inherit;
     }
     .field input:focus {
       border-color: #212F62;
@@ -91,75 +83,38 @@
       background: #fff;
     }
 
-    /* ── Password wrapper ── */
     .pw-wrap { position: relative; }
     .pw-wrap input { padding-right: 46px; }
     .pw-toggle {
-      position: absolute;
-      right: 12px;
-      top: 50%;
+      position: absolute; right: 12px; top: 50%;
       transform: translateY(-50%);
-      background: none;
-      border: none;
-      cursor: pointer;
-      color: #94a3b8;
-      font-size: 20px;
-      line-height: 1;
-      padding: 2px;
+      background: none; border: none; cursor: pointer;
+      color: #94a3b8; font-size: 20px;
       display: flex; align-items: center;
     }
-    .pw-toggle:hover { color: #475569; }
 
-    /* ── Button ── */
     .btn-login {
-      width: 100%;
-      padding: 14px;
-      background: #C81F25;
-      color: #fff;
-      border: none;
-      border-radius: 10px;
-      font-size: 15px;
-      font-weight: 700;
-      cursor: pointer;
-      margin-top: 6px;
-      transition: background 0.15s, transform 0.1s;
-      letter-spacing: 0.2px;
+      width: 100%; padding: 13px;
+      background: #C81F25; color: #fff;
+      border: none; border-radius: 10px;
+      font-size: 15px; font-weight: 700;
+      cursor: pointer; margin-top: 4px;
+      transition: background 0.15s;
+      font-family: inherit;
     }
     .btn-login:hover:not(:disabled) { background: #a81820; }
-    .btn-login:active:not(:disabled) { transform: scale(0.98); }
-    .btn-login:disabled {
-      background: #94a3b8;
-      cursor: not-allowed;
-    }
+    .btn-login:disabled { background: #94a3b8; cursor: not-allowed; }
 
-    /* ── Spinner inside button ── */
-    .btn-login.loading::after {
-      content: '';
-      display: inline-block;
-      width: 14px; height: 14px;
-      border: 2px solid rgba(255,255,255,0.4);
-      border-top-color: #fff;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      margin-left: 8px;
-      vertical-align: middle;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* ── Footer ── */
     .footer {
-      text-align: center;
-      margin-top: 28px;
-      font-size: 12px;
-      color: #94a3b8;
+      text-align: center; margin-top: 24px;
+      font-size: 12px; color: #94a3b8;
     }
     .footer a { color: #212F62; text-decoration: none; font-weight: 600; }
   </style>
 </head>
 <body>
-
 <div class="card">
-  <!-- Logo -->
+
   <div class="logo-area">
     <div class="logo-badge">
       <svg viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -171,10 +126,17 @@
     <p>Sistema de Inspeção e Laudos</p>
   </div>
 
-  <!-- Error -->
   <div class="error-box" id="err"></div>
 
-  <!-- Form -->
+  <!-- Botão Google -->
+  <button class="btn-google" onclick="doGoogleLogin()">
+    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+    Entrar com Google
+  </button>
+
+  <div class="divider">ou entre com usuário e senha</div>
+
+  <!-- Formulário usuário/senha -->
   <div class="field">
     <label for="username">Usuário</label>
     <input type="text" id="username" placeholder="Digite seu usuário"
@@ -186,8 +148,8 @@
     <div class="pw-wrap">
       <input type="password" id="password" placeholder="Digite sua senha"
              autocomplete="current-password">
-      <button class="pw-toggle" onclick="togglePw()" type="button" title="Mostrar/ocultar senha">
-        <svg id="eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <button class="pw-toggle" onclick="togglePw()" type="button">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
           <circle cx="12" cy="12" r="3"/>
         </svg>
@@ -210,15 +172,27 @@
 <script src="firebase-config.js"></script>
 
 <script>
+  const db   = firebase.firestore();
+  const auth = firebase.auth();
+
   // ── Verifica sessão já existente ──
   (function(){
     try {
       const s = JSON.parse(localStorage.getItem('alc_session') || 'null');
-      if (s && s.uid && (Date.now() - s.loginTime) < 8 * 60 * 60 * 1000) {
+      if (s && s.uid && (Date.now() - s.loginTime) < 8*60*60*1000) {
         window.location.replace('menu.html');
       }
     } catch(e) { localStorage.removeItem('alc_session'); }
   })();
+
+  // ── Verifica resultado de redirect do Google ──
+  auth.getRedirectResult().then(async result => {
+    if (result && result.user) {
+      await handleGoogleUser(result.user);
+    }
+  }).catch(e => {
+    if (e.code !== 'auth/no-auth-event') showError('Erro no login com Google: ' + e.message);
+  });
 
   function togglePw() {
     const inp = document.getElementById('password');
@@ -231,35 +205,79 @@
     el.style.display = 'block';
   }
 
+  // ── Login com Google ──
+  async function doGoogleLogin() {
+    document.getElementById('err').style.display = 'none';
+    try {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      // Popup em desktop; redirect em mobile
+      if (/Mobi|Android/i.test(navigator.userAgent)) {
+        await auth.signInWithRedirect(provider);
+      } else {
+        const result = await auth.signInWithPopup(provider);
+        await handleGoogleUser(result.user);
+      }
+    } catch(e) {
+      if (e.code === 'auth/popup-closed-by-user') return;
+      showError('Erro ao entrar com Google. Tente novamente.');
+    }
+  }
+
+  async function handleGoogleUser(firebaseUser) {
+    try {
+      // Busca perfil pelo e-mail Google no Firestore
+      const snap = await db.collection('users')
+        .where('email', '==', firebaseUser.email).limit(1).get();
+
+      if (snap.empty) {
+        await auth.signOut();
+        showError('Conta Google não autorizada. Peça ao administrador para liberar seu acesso.');
+        return;
+      }
+
+      const profile = snap.docs[0].data();
+      if (profile.active === false) {
+        await auth.signOut();
+        showError('Usuário desativado. Contate o administrador.');
+        return;
+      }
+
+      localStorage.setItem('alc_session', JSON.stringify({
+        uid:       snap.docs[0].id,
+        username:  profile.username || firebaseUser.displayName,
+        name:      profile.name || firebaseUser.displayName,
+        role:      profile.role,
+        loginTime: Date.now()
+      }));
+
+      window.location.replace('menu.html');
+    } catch(e) {
+      showError('Erro ao carregar perfil. Tente novamente.');
+    }
+  }
+
+  // ── Login usuário/senha ──
   async function doLogin() {
     const username = document.getElementById('username').value.trim().toLowerCase();
     const password = document.getElementById('password').value;
     const btn = document.getElementById('btn-login');
 
     document.getElementById('err').style.display = 'none';
-
-    if (!username || !password) {
-      showError('Preencha usuário e senha.');
-      return;
-    }
+    if (!username || !password) { showError('Preencha usuário e senha.'); return; }
 
     btn.disabled = true;
-    btn.classList.add('loading');
-    btn.textContent = 'Entrando';
+    btn.textContent = 'Entrando...';
 
     try {
-      // Converte username para e-mail (convenção interna)
       const email = username + '@alc.internal';
-      const cred = await firebase.auth().signInWithEmailAndPassword(email, password);
+      const cred  = await auth.signInWithEmailAndPassword(email, password);
 
-      // Carrega perfil do Firestore
-      const doc = await firebase.firestore().collection('users').doc(cred.user.uid).get();
-      if (!doc.exists) throw new Error('Perfil de usuário não encontrado. Contate o administrador.');
+      const doc = await db.collection('users').doc(cred.user.uid).get();
+      if (!doc.exists) throw new Error('Perfil não encontrado. Contate o administrador.');
 
       const profile = doc.data();
       if (profile.active === false) throw new Error('Usuário desativado. Contate o administrador.');
 
-      // Salva sessão local (8h)
       localStorage.setItem('alc_session', JSON.stringify({
         uid:       cred.user.uid,
         username:  profile.username,
@@ -272,21 +290,15 @@
 
     } catch(e) {
       let msg = 'Usuário ou senha incorretos.';
-      if (e.code === 'auth/too-many-requests')
-        msg = 'Muitas tentativas incorretas. Tente novamente em alguns minutos.';
-      else if (e.code === 'auth/network-request-failed')
-        msg = 'Sem conexão com a internet. Verifique sua rede.';
-      else if (e.message && !e.code)
-        msg = e.message;
+      if (e.code === 'auth/too-many-requests') msg = 'Muitas tentativas. Tente mais tarde.';
+      if (e.code === 'auth/network-request-failed') msg = 'Sem conexão. Verifique sua rede.';
+      if (e.message && !e.code) msg = e.message;
       showError(msg);
-
       btn.disabled = false;
-      btn.classList.remove('loading');
       btn.textContent = 'Entrar';
     }
   }
 
-  // Enter para logar
   document.addEventListener('keydown', e => {
     if (e.key === 'Enter') doLogin();
   });
