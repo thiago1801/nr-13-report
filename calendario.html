@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>ALC — Agenda</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#212F62">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { min-height: 100vh; background: #f1f5f9; font-family: 'Segoe UI', system-ui, sans-serif; color: #1e293b; }
+
+    /* Top Bar */
+    .topbar { background: #212F62; color: #fff; padding: 0 16px; height: 52px;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+    .back-btn { background: rgba(255,255,255,0.12); border: none; color: #fff;
+      padding: 5px 11px; border-radius: 7px; font-size: 13px; cursor: pointer;
+      text-decoration: none; font-family: inherit; }
+    .topbar h1 { font-size: 15px; font-weight: 700; }
+
+    /* Stats */
+    .stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px;
+      padding: 12px 14px 0; max-width: 820px; margin: 0 auto; }
+    .stat { background: #fff; border-radius: 10px; padding: 10px 6px;
+      text-align: center; border: 2px solid #e2e8f0; cursor: pointer; transition: all .15s; }
+    .stat:hover, .stat.on { border-color: #212F62; background: #eff6ff; }
+    .stat-n { font-size: 20px; font-weight: 900; }
+    .stat-l { font-size: 9px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-top: 2px; }
+    .r { color: #dc2626; } .o { color: #ea580c; } .y { color: #ca8a04; } .g { color: #16a34a; }
+
+    /* Calendar */
+    .cal-wrap { max-width: 820px; margin: 12px auto 0; padding: 0 14px; }
+    .cal-header { display: flex; align-items: center; justify-content: space-between;
+      background: #fff; border-radius: 12px 12px 0 0; padding: 12px 16px;
+      border: 1.5px solid #e2e8f0; border-bottom: none; }
+    .cal-month { font-size: 16px; font-weight: 800; color: #212F62; }
+    .cal-nav { display: flex; gap: 6px; }
+    .btn-nav { background: #f1f5f9; border: none; border-radius: 7px; padding: 6px 12px;
+      font-size: 13px; font-weight: 700; cursor: pointer; color: #374151; }
+    .btn-nav:hover { background: #e2e8f0; }
+    .btn-today { background: #212F62; color: #fff; border: none; border-radius: 7px;
+      padding: 6px 12px; font-size: 12px; font-weight: 700; cursor: pointer; }
+
+    .cal-grid { background: #fff; border: 1.5px solid #e2e8f0; border-radius: 0 0 12px 12px;
+      overflow: hidden; margin-bottom: 12px; }
+    .cal-dow { display: grid; grid-template-columns: repeat(7,1fr);
+      background: #212F62; }
+    .cal-dow span { text-align: center; padding: 7px 2px; font-size: 10px;
+      font-weight: 700; color: rgba(255,255,255,0.8); text-transform: uppercase; }
+    .cal-days { display: grid; grid-template-columns: repeat(7,1fr); }
+    .cal-day {
+      min-height: 52px; border-right: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9;
+      padding: 4px; cursor: pointer; transition: background .1s; position: relative;
+    }
+    .cal-day:hover { background: #f8faff; }
+    .cal-day.other-month { background: #fafafa; }
+    .cal-day.today { background: #eff6ff; }
+    .cal-day.today .day-num { background: #212F62; color: #fff; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; }
+    .cal-day.selected { background: #dbeafe; }
+    .day-num { font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 2px; line-height: 22px; padding: 0 2px; }
+    .day-num.other { color: #cbd5e1; }
+    .day-dots { display: flex; flex-wrap: wrap; gap: 2px; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .dot-r { background: #dc2626; } .dot-o { background: #ea580c; }
+    .dot-y { background: #ca8a04; } .dot-g { background: #16a34a; }
+
+    /* Event list */
+    .list-wrap { max-width: 820px; margin: 0 auto; padding: 0 14px 32px; }
+    .list-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .list-title { font-size: 13px; font-weight: 800; color: #212F62; }
+    .btn-email-all { padding: 6px 14px; background: #C81F25; color: #fff;
+      border: none; border-radius: 7px; font-size: 12px; font-weight: 700; cursor: pointer; }
+
+    .ev-card { background: #fff; border-radius: 10px; border-left: 4px solid #e2e8f0;
+      padding: 12px 14px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .ev-card.r { border-left-color: #dc2626; }
+    .ev-card.o { border-left-color: #ea580c; }
+    .ev-card.y { border-left-color: #ca8a04; }
+    .ev-card.g { border-left-color: #16a34a; }
+    .ev-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .ev-info { flex: 1; }
+    .ev-cliente { font-size: 13px; font-weight: 800; }
+    .ev-sub { font-size: 11px; color: #64748b; margin-top: 2px; line-height: 1.5; }
+    .ev-type { display: inline-block; font-size: 10px; font-weight: 700; padding: 1px 7px;
+      border-radius: 5px; margin-top: 4px; }
+    .t-nr13  { background: #eff6ff; color: #1d4ed8; }
+    .t-calib { background: #fff7ed; color: #c2410c; }
+    .t-pront { background: #fdf4ff; color: #7c3aed; }
+    .ev-right { text-align: right; flex-shrink: 0; }
+    .ev-date { font-size: 12px; font-weight: 700; color: #374151; }
+    .ev-badge { font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 5px; margin-top: 3px; }
+    .b-r { background: #fef2f2; color: #dc2626; }
+    .b-o { background: #fff7ed; color: #ea580c; }
+    .b-y { background: #fefce8; color: #ca8a04; }
+    .b-g { background: #f0fdf4; color: #16a34a; }
+    .ev-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+    .btn-gcal { padding: 4px 10px; background: #fff; color: #374151; border: 1.5px solid #e2e8f0;
+      border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;
+      text-decoration: none; font-family: inherit; }
+    .btn-gcal:hover { border-color: #4285F4; color: #4285F4; }
+    .btn-mail { padding: 4px 10px; background: #fff; color: #374151; border: 1.5px solid #e2e8f0;
+      border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; font-family: inherit; }
+    .btn-mail:hover { border-color: #C81F25; color: #C81F25; }
+
+    .empty { text-align: center; padding: 40px 20px; color: #94a3b8; }
+    .empty .icon { font-size: 40px; margin-bottom: 10px; }
+    .sec-label { font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase;
+      letter-spacing: .4px; margin: 14px 0 6px; }
+
+    /* Search */
+    .search-bar { max-width: 820px; margin: 8px auto 0; padding: 0 14px; }
+    .search-inp { width: 100%; padding: 9px 13px; border: 1.5px solid #e2e8f0; border-radius: 9px;
+      font-size: 13px; font-family: inherit; outline: none; background: #fff; }
+    .search-inp:focus { border-color: #212F62; }
+
+    /* Modal */
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300;
+      display: none; align-items: center; justify-content: center; padding: 16px; }
+    .overlay.open { display: flex; }
+    .modal { background: #fff; border-radius: 14px; padding: 22px; width: 100%;
+      max-width: 440px; box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
+    .modal h3 { font-size: 15px; font-weight: 800; color: #212F62; margin-bottom: 12px; }
+    .modal textarea { width: 100%; min-height: 160px; padding: 9px; font-size: 12px;
+      border: 1.5px solid #e2e8f0; border-radius: 8px; resize: vertical; outline: none;
+      font-family: monospace; line-height: 1.6; }
+    .modal-btns { display: flex; gap: 8px; margin-top: 12px; }
+    .btn-send { flex:1; padding: 10px; background: #C81F25; color: #fff; border: none;
+      border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .btn-cancel { padding: 10px 16px; background: #f1f5f9; color: #374151; border: none;
+      border-radius: 8px; font-size: 13px; cursor: pointer; }
+
+    @media(max-width:480px) {
+      .stats { grid-template-columns: repeat(2,1fr); }
+      .cal-day { min-height: 42px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div style="display:flex;align-items:center;gap:10px">
+    <a class="back-btn" href="menu.html">← Menu</a>
+    <h1>📅 Agenda</h1>
+  </div>
+</div>
+
+<!-- Contadores -->
+<div class="stats">
+  <div class="stat" id="s-r" onclick="toggleFilter('r')">
+    <div class="stat-n r" id="n-r">—</div>
+    <div class="stat-l">Vencidos</div>
+  </div>
+  <div class="stat" id="s-o" onclick="toggleFilter('o')">
+    <div class="stat-n o" id="n-o">—</div>
+    <div class="stat-l">≤ 30 dias</div>
+  </div>
+  <div class="stat" id="s-y" onclick="toggleFilter('y')">
+    <div class="stat-n y" id="n-y">—</div>
+    <div class="stat-l">31–90 dias</div>
+  </div>
+  <div class="stat" id="s-g" onclick="toggleFilter('g')">
+    <div class="stat-n g" id="n-g">—</div>
+    <div class="stat-l">> 90 dias</div>
+  </div>
+</div>
+
+<!-- Calendário -->
+<div class="cal-wrap">
+  <div class="cal-header">
+    <span class="cal-month" id="cal-month">—</span>
+    <div class="cal-nav">
+      <button class="btn-nav" onclick="shiftMonth(-1)">‹</button>
+      <button class="btn-today" onclick="goToday()">Hoje</button>
+      <button class="btn-nav" onclick="shiftMonth(1)">›</button>
+    </div>
+  </div>
+  <div class="cal-grid">
+    <div class="cal-dow">
+      <span>Dom</span><span>Seg</span><span>Ter</span><span>Qua</span>
+      <span>Qui</span><span>Sex</span><span>Sáb</span>
+    </div>
+    <div class="cal-days" id="cal-days"></div>
+  </div>
+</div>
+
+<!-- Busca -->
+<div class="search-bar">
+  <input class="search-inp" id="search" type="text"
+    placeholder="🔍 Buscar cliente, tag, local, serviço..." oninput="renderList()">
+</div>
+
+<!-- Lista -->
+<div class="list-wrap">
+  <div class="list-header">
+    <span class="list-title" id="list-title">Próximos vencimentos</span>
+    <button class="btn-email-all" onclick="openModal()">✉️ Alertas por e-mail</button>
+  </div>
+  <div id="ev-list"><div class="empty"><div class="icon">⏳</div>Carregando...</div></div>
+</div>
+
+<!-- Modal alerta -->
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3>✉️ Enviar alertas por e-mail</h3>
+    <div id="modal-to" style="font-size:12px;color:#64748b;margin-bottom:10px"></div>
+    <textarea id="modal-body" readonly></textarea>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-send" onclick="sendAlert()">📧 Abrir e-mail</button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+// ── Auth ──
+const session=(function(){
+  try{const s=JSON.parse(localStorage.getItem('alc_session')||'null');
+    if(s&&s.uid&&(Date.now()-s.loginTime)<8*60*60*1000)return s;}catch(e){}return null;
+})();
+if(!session){window.location.replace('login.html');}
+const db=firebase.firestore();
+
+// ── Estado ──
+let allEvents=[];
+let masterEmails=[];
+let activeFilter=null;
+let selectedDay=null;
+let viewYear=new Date().getFullYear();
+let viewMonth=new Date().getMonth();
+
+// ── Parseia data BR DD/MM/YYYY ──
+function parseBR(s){
+  if(!s)return null;
+  const p=s.trim().split('/');
+  if(p.length!==3)return null;
+  const d=new Date(+p[2],+p[1]-1,+p[0]);
+  return isNaN(d)?null:d;
+}
+
+// ── Formata data ──
+function fmtDate(d){if(!d)return'—';return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});}
+
+// ── Dias restantes ──
+function daysLeft(d){
+  if(!d)return null;
+  const t=new Date();t.setHours(0,0,0,0);
+  return Math.round((d-t)/86400000);
+}
+
+// ── Categoria ──
+function cat(days){if(days===null)return null;if(days<0)return'r';if(days<=30)return'o';if(days<=90)return'y';return'g';}
+
+// ── Label dias ──
+function daysLabel(days){
+  if(days===null)return'—';
+  if(days<0)return Math.abs(days)+' d atraso';
+  if(days===0)return'Hoje!';
+  return days+' dia'+(days!==1?'s':'');
+}
+
+// ── Extrai eventos de um registro ──
+function extractFromRecord(rec){
+  const f=rec.formData||{};
+  const base={
+    cliente: f.cliente_nome||f.cliente||rec.cliente||'(sem nome)',
+    tag:     f.tag_vaso||f.tag||rec.vp||'—',
+    local:   f.local||f.localizacao||rec.local||'',
+    end:     f.cliente_end||'',
+    id:      rec.id,
+  };
+  const evts=[];
+  const slots=[
+    {field:'data_prox_insp_ext', label:'Inspeção Externa NR-13',  type:'nr13'},
+    {field:'data_prox_insp_int', label:'Inspeção Interna NR-13',  type:'nr13'},
+    {field:'data_calib_manval',  label:'Calibração Manômetro',    type:'calib'},
+    {field:'data_prox_calib',    label:'Calibração',              type:'calib'},
+    {field:'data_prox_pront',    label:'Reconstituição Prontuário',type:'pront'},
+  ];
+  slots.forEach(sl=>{
+    const raw=f[sl.field];
+    const d=parseBR(raw);
+    if(d){
+      const dl=daysLeft(d);
+      evts.push({...base,label:sl.label,type:sl.type,date:d,days:dl,cat:cat(dl)});
+    }
+  });
+  return evts;
+}
+
+// ── Deduplica por cliente+tag+label (mantém mais recente) ──
+function dedup(events){
+  const map={};
+  events.forEach(e=>{
+    const k=`${e.cliente}|${e.tag}|${e.label}`;
+    if(!map[k]||e.date>map[k].date)map[k]=e;
+  });
+  return Object.values(map);
+}
+
+// ── Atualiza contadores ──
+function updateStats(){
+  const c={r:0,o:0,y:0,g:0};
+  allEvents.forEach(e=>{if(e.cat)c[e.cat]++;});
+  ['r','o','y','g'].forEach(k=>{document.getElementById('n-'+k).textContent=c[k];});
+}
+
+// ── Filtro por card ──
+function toggleFilter(f){
+  activeFilter=(activeFilter===f)?null:f;
+  ['r','o','y','g'].forEach(k=>{document.getElementById('s-'+k).classList.toggle('on',activeFilter===k);});
+  selectedDay=null;
+  renderCal();renderList();
+}
+
+// ── Calendário ──
+const MONTHS=['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+  'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+function renderCal(){
+  document.getElementById('cal-month').textContent=`${MONTHS[viewMonth]} ${viewYear}`;
+  const today=new Date();today.setHours(0,0,0,0);
+  const first=new Date(viewYear,viewMonth,1);
+  const last=new Date(viewYear,viewMonth+1,0);
+  const startDow=first.getDay();
+
+  // Mapa: 'YYYY-MM-DD' → [events]
+  const dayMap={};
+  allEvents.forEach(e=>{
+    if(!e.date)return;
+    const k=e.date.getFullYear()+'-'+String(e.date.getMonth()+1).padStart(2,'0')+'-'+String(e.date.getDate()).padStart(2,'0');
+    if(!dayMap[k])dayMap[k]=[];
+    dayMap[k].push(e);
+  });
+
+  let html='';
+  // Dias do mês anterior
+  for(let i=0;i<startDow;i++){
+    const d=new Date(viewYear,viewMonth,-(startDow-i-1));
+    html+=`<div class="cal-day other-month"><div class="day-num other">${d.getDate()}</div></div>`;
+  }
+  // Dias do mês
+  for(let d=1;d<=last.getDate();d++){
+    const dt=new Date(viewYear,viewMonth,d);
+    const isToday=dt.getTime()===today.getTime();
+    const k=viewYear+'-'+String(viewMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const evts=dayMap[k]||[];
+    const isSel=selectedDay===k;
+    let dots='';
+    evts.forEach(e=>{dots+=`<div class="dot dot-${e.cat||'g'}"></div>`;});
+    html+=`<div class="cal-day${isToday?' today':''}${isSel?' selected':''}" onclick="selectDay('${k}')">
+      <div class="day-num">${d}</div>
+      <div class="day-dots">${dots}</div>
+    </div>`;
+  }
+  // Completar última linha
+  const total=startDow+last.getDate();
+  const rem=total%7===0?0:7-(total%7);
+  for(let i=1;i<=rem;i++){
+    html+=`<div class="cal-day other-month"><div class="day-num other">${i}</div></div>`;
+  }
+  document.getElementById('cal-days').innerHTML=html;
+}
+
+function shiftMonth(dir){
+  viewMonth+=dir;
+  if(viewMonth<0){viewMonth=11;viewYear--;}
+  if(viewMonth>11){viewMonth=0;viewYear++;}
+  selectedDay=null;
+  renderCal();renderList();
+}
+function goToday(){
+  const t=new Date();viewYear=t.getFullYear();viewMonth=t.getMonth();
+  selectedDay=null;renderCal();renderList();
+}
+function selectDay(k){
+  selectedDay=(selectedDay===k)?null:k;
+  renderCal();renderList();
+}
+
+// ── Lista de eventos ──
+function renderList(){
+  const search=document.getElementById('search').value.toLowerCase();
+  const container=document.getElementById('ev-list');
+  const title=document.getElementById('list-title');
+
+  let filtered=allEvents.filter(e=>{
+    if(activeFilter&&e.cat!==activeFilter)return false;
+    if(selectedDay){
+      if(!e.date)return false;
+      const k=e.date.getFullYear()+'-'+String(e.date.getMonth()+1).padStart(2,'0')+'-'+String(e.date.getDate()).padStart(2,'0');
+      if(k!==selectedDay)return false;
+    }
+    if(search){
+      const h=[e.cliente,e.tag,e.local,e.label].join(' ').toLowerCase();
+      if(!h.includes(search))return false;
+    }
+    return true;
+  });
+
+  filtered.sort((a,b)=>a.date-b.date);
+
+  if(selectedDay){
+    const[y,m,d]=selectedDay.split('-');
+    title.textContent=`Serviços em ${d}/${m}/${y} (${filtered.length})`;
+  } else if(activeFilter){
+    const lbl={r:'Vencidos',o:'Vencendo ≤ 30 dias',y:'Vencendo 31–90 dias',g:'> 90 dias'};
+    title.textContent=lbl[activeFilter]+' ('+filtered.length+')';
+  } else {
+    title.textContent=`Próximos vencimentos (${filtered.length})`;
+  }
+
+  if(filtered.length===0){
+    container.innerHTML=`<div class="empty">
+      <div class="icon">📅</div>
+      <strong>${allEvents.length===0?'Nenhum vencimento cadastrado':'Nenhum resultado para este filtro'}</strong>
+      <p style="margin-top:6px;font-size:13px">${allEvents.length===0?'Salve laudos com as datas de próxima inspeção na aba Gerar (NR-13).':'Tente outro filtro ou busca.'}</p>
+    </div>`;
+    return;
+  }
+
+  // Agrupa por categoria
+  const groups=[
+    {k:'r',label:'🔴 Vencidos'},
+    {k:'o',label:'🟠 Vencendo em até 30 dias'},
+    {k:'y',label:'🟡 Vencendo em 31–90 dias'},
+    {k:'g',label:'🟢 Acima de 90 dias'},
+  ].map(g=>({...g,items:filtered.filter(e=>e.cat===g.k)}))
+   .filter(g=>g.items.length>0);
+
+  container.innerHTML=groups.map(g=>`
+    <div class="sec-label">${g.label} — ${g.items.length} serviço(s)</div>
+    ${g.items.map(e=>eventCard(e)).join('')}
+  `).join('');
+}
+
+function eventCard(e){
+  const c=e.cat||'g';
+  const tClass={nr13:'t-nr13',calib:'t-calib',pront:'t-pront'}[e.type]||'t-nr13';
+  const tLabel={nr13:'NR-13',calib:'Calibração',pront:'Prontuário'}[e.type]||'NR-13';
+
+  // Google Calendar link
+  const fmt=d=>`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+  const title=encodeURIComponent(`${e.label} — ${e.cliente} (${e.tag})`);
+  const det=encodeURIComponent(`Cliente: ${e.cliente}\nTag: ${e.tag}\nLocal: ${e.local}\n${e.end?'Endereço: '+e.end:''}`);
+  const loc=encodeURIComponent(e.local||'');
+  const gcal=`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${fmt(e.date)}/${fmt(e.date)}&details=${det}&location=${loc}`;
+
+  // Email individual
+  const sub=encodeURIComponent(`⚠️ Vencimento: ${e.label} — ${e.cliente}`);
+  const body=encodeURIComponent(`Alerta — ALC Compressores\n\nCliente: ${e.cliente}\nEquipamento: ${e.tag}\nLocal: ${e.local}\nServiço: ${e.label}\nVencimento: ${fmtDate(e.date)} (${daysLabel(e.days)})`);
+  const mailto=`mailto:?subject=${sub}&body=${body}`;
+
+  return `<div class="ev-card ${c}">
+    <div class="ev-top">
+      <div class="ev-info">
+        <div class="ev-cliente">${e.cliente}</div>
+        <div class="ev-sub">🏷️ ${e.tag} · 📍 ${e.local||'—'}</div>
+        <span class="ev-type ${tClass}">${tLabel}</span>
+      </div>
+      <div class="ev-right">
+        <div class="ev-date">${fmtDate(e.date)}</div>
+        <div class="ev-badge b-${c}">${daysLabel(e.days)}</div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:#64748b;margin-top:6px;border-top:1px solid #f1f5f9;padding-top:6px">
+      📋 ${e.label}${e.end?'<br>📍 '+e.end:''}
+    </div>
+    <div class="ev-actions">
+      <a class="btn-gcal" href="${gcal}" target="_blank">📅 Google Agenda</a>
+      <button class="btn-mail" onclick="window.open('${mailto}')">✉️ E-mail</button>
+    </div>
+  </div>`;
+}
+
+// ── Modal de alertas ──
+function openModal(){
+  const urgent=allEvents.filter(e=>e.cat==='r'||e.cat==='o');
+  const body=urgent.length>0
+    ?`Alertas de vencimento — ALC Compressores\n\n${urgent.length} serviço(s) vencido(s) ou vencendo em até 30 dias:\n\n`+
+      urgent.map(e=>`• ${e.label}: ${e.cliente} (${e.tag}) — ${fmtDate(e.date)} [${daysLabel(e.days)}]`).join('\n')+
+      '\n\nAcesse o sistema para detalhes.'
+    :'Nenhum vencimento urgente no momento.';
+  document.getElementById('modal-body').value=body;
+  document.getElementById('modal-to').textContent=
+    masterEmails.length>0?'Para: '+masterEmails.join(', '):'Nenhum e-mail master cadastrado.';
+  document.getElementById('overlay').classList.add('open');
+}
+function closeModal(){document.getElementById('overlay').classList.remove('open');}
+function sendAlert(){
+  const sub=encodeURIComponent('⚠️ Alertas de Vencimento — ALC Compressores');
+  const body=encodeURIComponent(document.getElementById('modal-body').value);
+  const to=masterEmails.join(',');
+  window.open(`mailto:${to}?subject=${sub}&body=${body}`);
+  closeModal();
+}
+
+// ── Carga ──
+async function loadMasterEmails(){
+  try{
+    const snap=await db.collection('users').get();
+    masterEmails=snap.docs
+      .map(d=>d.data())
+      .filter(u=>u.active!==false&&(u.role==='admin'||u.role==='master')&&u.email)
+      .map(u=>u.email);
+  }catch(e){}
+}
+
+async function loadEvents(){
+  try{
+    const snap=await db.collection('registros').limit(500).get();
+    const raw=[];
+    snap.docs.forEach(d=>{
+      const rec={id:d.id,...d.data()};
+      raw.push(...extractFromRecord(rec));
+    });
+    allEvents=dedup(raw);
+    updateStats();
+    renderCal();
+    renderList();
+  }catch(e){
+    document.getElementById('ev-list').innerHTML=
+      `<div class="empty"><div class="icon">⚠️</div><strong>Erro ao carregar</strong><p style="margin-top:6px">${e.message}</p></div>`;
+  }
+}
+
+// Inicializa calendário mesmo sem dados
+renderCal();
+loadMasterEmails();
+loadEvents();
+</script>
+</body>
+</html>
