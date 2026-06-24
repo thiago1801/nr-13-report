@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>ALC — Últimos Registros</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#212F62">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      background: #f1f5f9;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      color: #1e293b;
+    }
+
+    /* ── Top Bar ── */
+    .topbar {
+      background: #212F62; color: #fff;
+      padding: 0 20px; height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .topbar-left { display: flex; align-items: center; gap: 10px; }
+    .back-btn {
+      background: rgba(255,255,255,0.12); border: none; color: #fff;
+      padding: 6px 12px; border-radius: 7px; font-size: 13px;
+      cursor: pointer; text-decoration: none; display: inline-block;
+      font-family: inherit;
+    }
+    .back-btn:hover { background: rgba(255,255,255,0.2); }
+    .topbar h1 { font-size: 16px; font-weight: 700; }
+
+    /* ── Filtro ── */
+    .toolbar {
+      max-width: 780px; margin: 0 auto;
+      padding: 20px 20px 0;
+      display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    }
+    .filter-select {
+      padding: 8px 12px; border: 1.5px solid #e2e8f0;
+      border-radius: 8px; font-size: 13px; font-family: inherit;
+      background: #fff; color: #374151; outline: none;
+    }
+    .filter-select:focus { border-color: #212F62; }
+    .search-inp {
+      flex: 1; min-width: 180px;
+      padding: 8px 12px; border: 1.5px solid #e2e8f0;
+      border-radius: 8px; font-size: 13px; font-family: inherit;
+      background: #fff; color: #111; outline: none;
+    }
+    .search-inp:focus { border-color: #212F62; }
+    .results-count {
+      font-size: 12px; color: #94a3b8; font-weight: 600;
+      padding: 4px 0;
+    }
+
+    /* ── Main ── */
+    .main { max-width: 780px; margin: 0 auto; padding: 16px 20px 100px; }
+
+    /* ── Cards ── */
+    .rec-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .rec-card {
+      background: #fff; border-radius: 12px;
+      padding: 14px 18px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      border: 1.5px solid #e2e8f0;
+      display: flex; align-items: flex-start; gap: 14px;
+    }
+    .rec-icon {
+      width: 44px; height: 44px; border-radius: 12px;
+      background: #eff6ff; display: flex; align-items: center;
+      justify-content: center; font-size: 20px; flex-shrink: 0;
+    }
+    .rec-info { flex: 1; min-width: 0; }
+    .rec-title { font-size: 14px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
+    .rec-meta { font-size: 12px; color: #64748b; line-height: 1.6; }
+    .rec-badges { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+    .rec-badge {
+      font-size: 10px; font-weight: 700;
+      padding: 2px 8px; border-radius: 6px;
+      text-transform: uppercase;
+    }
+    .badge-rascunho   { background: #fff7ed; color: #c2410c; }
+    .badge-finalizado { background: #f0fdf4; color: #15803d; }
+    .badge-pdf  { background: #fef2f2; color: #dc2626; }
+    .badge-word { background: #eff6ff; color: #1d4ed8; }
+
+    .rec-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+    .btn-rec {
+      padding: 5px 12px; border-radius: 7px; font-size: 11px;
+      font-weight: 700; cursor: pointer; border: 1.5px solid;
+      font-family: inherit; text-decoration: none; display: inline-block;
+    }
+    .btn-continuar { background: #212F62; color: #fff; border-color: #212F62; }
+    .btn-reabrir   { background: #fff7ed; color: #c2410c; border-color: #fed7aa; }
+    .btn-danger    { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+
+    .empty-state {
+      text-align: center; padding: 60px 20px; color: #94a3b8;
+    }
+    .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+    .empty-state p { font-size: 14px; margin-top: 6px; }
+
+    .loading { text-align: center; padding: 40px; color: #94a3b8; font-size: 14px; }
+
+    /* ── Bottom Nav ── */
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: #1e293b; border-top: 1px solid #334155;
+      display: flex; z-index: 500;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .bnav-item {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 8px 4px; text-decoration: none;
+      color: #94a3b8; font-size: 10px; font-weight: 700;
+      gap: 3px; border: none; background: none;
+      cursor: pointer; font-family: inherit; transition: color .15s;
+    }
+    .bnav-item.active { color: #3b82f6; }
+    .bnav-item.disabled { opacity: 0.4; cursor: default; pointer-events: none; }
+    .bnav-item .bnav-icon { font-size: 20px; line-height: 1; }
+    .bnav-item .bnav-soon {
+      font-size: 8px; background: #334155; color: #94a3b8;
+      padding: 1px 5px; border-radius: 4px; letter-spacing: .3px;
+    }
+
+    @media (max-width: 500px) {
+      .toolbar { padding: 16px 16px 0; }
+      .main { padding: 16px 16px 100px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Top Bar -->
+<div class="topbar">
+  <div class="topbar-left">
+    <a class="back-btn" href="menu.html">← Menu</a>
+    <h1>🗂️ Últimos Registros</h1>
+  </div>
+</div>
+
+<!-- Filtros -->
+<div class="toolbar">
+  <select class="filter-select" id="filter-modulo" onchange="applyFilters()">
+    <option value="">Todos os módulos</option>
+    <option value="NR-13">Inspeção NR-13</option>
+  </select>
+  <select class="filter-select" id="filter-status" onchange="applyFilters()">
+    <option value="">Todos os status</option>
+    <option value="rascunho">Rascunhos</option>
+    <option value="finalizado">Finalizados</option>
+  </select>
+  <input class="search-inp" id="search-inp" type="text"
+    placeholder="🔍 Buscar cliente, VP, relatório..."
+    oninput="applyFilters()">
+</div>
+<div class="toolbar" style="padding-top:8px">
+  <span class="results-count" id="results-count"></span>
+</div>
+
+<!-- Lista -->
+<div class="main">
+  <div id="rec-list" class="rec-list">
+    <div class="loading">⏳ Carregando registros...</div>
+  </div>
+</div>
+
+<!-- Bottom Nav -->
+<nav class="bottom-nav">
+  <a class="bnav-item" href="menu.html">
+    <span class="bnav-icon">🏠</span>
+    <span>Menu</span>
+  </a>
+  <a class="bnav-item" href="Laudo-VP-NR13.html">
+    <span class="bnav-icon">🔧</span>
+    <span>NR-13</span>
+  </a>
+  <div class="bnav-item disabled">
+    <span class="bnav-icon">⚙️</span>
+    <span>Calibração</span>
+    <span class="bnav-soon">em breve</span>
+  </div>
+  <div class="bnav-item disabled">
+    <span class="bnav-icon">📋</span>
+    <span>Prontuário</span>
+    <span class="bnav-soon">em breve</span>
+  </div>
+  <a class="bnav-item active" href="registros.html">
+    <span class="bnav-icon">🗂️</span>
+    <span>Registros</span>
+  </a>
+</nav>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+
+<script>
+  // ── Auth check ──
+  const session = (function(){
+    try {
+      const s = JSON.parse(localStorage.getItem('alc_session') || 'null');
+      if (s && s.uid && (Date.now() - s.loginTime) < 8*60*60*1000) return s;
+    } catch(e) {}
+    return null;
+  })();
+  if (!session) { window.location.replace('login.html'); }
+
+  const db = firebase.firestore();
+  let allRecords = [];
+
+  // ── Formata data ──
+  function fmtDate(ts) {
+    if (!ts) return '—';
+    const d = ts.toDate ? ts.toDate() : new Date(ts);
+    return d.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric',
+      hour:'2-digit', minute:'2-digit' });
+  }
+
+  // ── Ícone por módulo ──
+  function moduleIcon(m) {
+    if (m === 'NR-13') return '🔧';
+    if (m === 'Calibração') return '⚙️';
+    return '📋';
+  }
+
+  // ── Renderiza cards ──
+  function renderCards(records) {
+    const list = document.getElementById('rec-list');
+    document.getElementById('results-count').textContent =
+      records.length + ' registro' + (records.length !== 1 ? 's' : '');
+
+    if (records.length === 0) {
+      list.innerHTML = `
+        <div class="empty-state">
+          <div class="icon">🗂️</div>
+          <strong>Nenhum registro encontrado</strong>
+          <p>Os documentos gerados aparecerão aqui automaticamente.</p>
+        </div>`;
+      return;
+    }
+
+    list.innerHTML = records.map(r => {
+      const isFinal = r.status === 'finalizado';
+      const statusBadge = isFinal
+        ? '<span class="rec-badge badge-finalizado">✅ Finalizado</span>'
+        : '<span class="rec-badge badge-rascunho">✏️ Rascunho</span>';
+      const tipoBadge = r.tipo === 'PDF'
+        ? '<span class="rec-badge badge-pdf">PDF</span>'
+        : r.tipo === 'Word'
+          ? '<span class="rec-badge badge-word">Word</span>'
+          : '';
+
+      // Ações conforme status
+      let actions = '';
+      if (r.modulo === 'NR-13') {
+        if (!isFinal) {
+          actions += `<a class="btn-rec btn-continuar" href="Laudo-VP-NR13.html?id=${r.id}">✏️ Continuar editando</a>`;
+        } else {
+          actions += `<a class="btn-rec btn-continuar" href="Laudo-VP-NR13.html?id=${r.id}">📄 Abrir PDF / QR</a>`;
+        }
+      }
+      if (session && (session.role === 'admin' || session.role === 'master')) {
+        if (isFinal) {
+          actions += `<button class="btn-rec btn-reabrir" onclick="reabrir('${r.id}')">🔓 Reabrir</button>`;
+        }
+        actions += `<button class="btn-rec btn-danger" onclick="excluir('${r.id}')">🗑️ Excluir</button>`;
+      }
+
+      return `
+      <div class="rec-card" id="card-${r.id}">
+        <div class="rec-icon">${moduleIcon(r.modulo)}</div>
+        <div class="rec-info">
+          <div class="rec-title">${r.cliente || '—'}</div>
+          <div class="rec-meta">
+            <b>VP:</b> ${r.vp || '—'} &nbsp;·&nbsp;
+            <b>Rel.:</b> ${r.relatorio || '—'}<br>
+            <b>Inspeção:</b> ${r.data_inspecao || '—'} &nbsp;·&nbsp;
+            <b>Local:</b> ${r.local || '—'}<br>
+            <b>Por:</b> ${r.usuario || '—'} &nbsp;·&nbsp;
+            <b>Salvo:</b> ${fmtDate(r.updatedAt || r.createdAt)}
+          </div>
+          ${actions ? `<div class="rec-actions">${actions}</div>` : ''}
+        </div>
+        <div class="rec-badges">${statusBadge}${tipoBadge}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── Filtros ──
+  function applyFilters() {
+    const modulo = document.getElementById('filter-modulo').value;
+    const status = document.getElementById('filter-status').value;
+    const search = document.getElementById('search-inp').value.toLowerCase();
+
+    const filtered = allRecords.filter(r => {
+      if (modulo && r.modulo  !== modulo) return false;
+      if (status && r.status  !== status) return false;
+      if (search) {
+        const haystack = [r.cliente, r.vp, r.relatorio, r.local, r.usuario].join(' ').toLowerCase();
+        if (!haystack.includes(search)) return false;
+      }
+      return true;
+    });
+    renderCards(filtered);
+  }
+
+  // ── Carrega do Firestore ──
+  async function loadRecords() {
+    try {
+      let snap;
+      try {
+        snap = await db.collection('registros').orderBy('updatedAt', 'desc').limit(100).get();
+      } catch(e) {
+        snap = await db.collection('registros').orderBy('createdAt', 'desc').limit(100).get();
+      }
+
+      allRecords = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // ordena por updatedAt ou createdAt descendente
+      allRecords.sort((a, b) => {
+        const ta = (a.updatedAt?.toDate?.() || a.createdAt?.toDate?.() || new Date(0)).getTime();
+        const tb = (b.updatedAt?.toDate?.() || b.createdAt?.toDate?.() || new Date(0)).getTime();
+        return tb - ta;
+      });
+      applyFilters();
+    } catch(e) {
+      document.getElementById('rec-list').innerHTML =
+        `<div class="empty-state"><div class="icon">⚠️</div>
+         <strong>Erro ao carregar</strong><p>${e.message}</p></div>`;
+    }
+  }
+
+  // ── Reabrir como rascunho (admin/master) ──
+  async function reabrir(id) {
+    if (!confirm('Reabrir este laudo para edição?')) return;
+    try {
+      await db.collection('registros').doc(id).update({ status: 'rascunho', updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+      await loadRecords();
+    } catch(e) { alert('Erro: ' + e.message); }
+  }
+
+  // ── Excluir ──
+  async function excluir(id) {
+    if (!confirm('Excluir este registro permanentemente?')) return;
+    try {
+      await db.collection('registros').doc(id).delete();
+      try { localStorage.removeItem('alc_draft_' + id); } catch(e){}
+      document.getElementById('card-' + id)?.remove();
+      allRecords = allRecords.filter(r => r.id !== id);
+      applyFilters();
+    } catch(e) { alert('Erro: ' + e.message); }
+  }
+
+  loadRecords();
+</script>
+</body>
+</html>

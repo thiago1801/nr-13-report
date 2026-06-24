@@ -312,6 +312,10 @@ input,button,select,textarea{font-family:inherit;}
 
   <!-- Bottom Navigation -->
   <nav class="bottom-nav">
+    <a class="bnav-item" href="menu.html">
+      <span class="bnav-icon">🏠</span>
+      <span>Menu</span>
+    </a>
     <a class="bnav-item active" href="Laudo-VP-NR13.html">
       <span class="bnav-icon">🔧</span>
       <span>NR-13</span>
@@ -321,11 +325,10 @@ input,button,select,textarea{font-family:inherit;}
       <span>Calibração</span>
       <span class="bnav-soon">em breve</span>
     </div>
-    <div class="bnav-item disabled">
-      <span class="bnav-icon">📋</span>
-      <span>Prontuário</span>
-      <span class="bnav-soon">em breve</span>
-    </div>
+    <a class="bnav-item" href="registros.html">
+      <span class="bnav-icon">🗂️</span>
+      <span>Registros</span>
+    </a>
     <a class="bnav-item" href="admin.html" id="bnav-admin" style="display:none">
       <span class="bnav-icon">⚙</span>
       <span>Admin</span>
@@ -500,7 +503,31 @@ function loginAs(u){
   } catch(e){}
   renderTabNav();renderContent();updateHeader();
 }
-function logout(){location.reload();}
+function logout(){
+  localStorage.removeItem('alc_session');
+  window.location.replace('login.html');
+}
+
+// ── Estado do registro ──
+let currentRecordId = null;
+let isFinalized = false;
+
+// ── Auto-login via sessão Firebase + carrega registro por URL ──
+window.addEventListener('DOMContentLoaded', async function() {
+  try {
+    var s = JSON.parse(localStorage.getItem('alc_session') || 'null');
+    if (s && s.uid && (Date.now() - s.loginTime) < 8*60*60*1000) {
+      var internalRole = (s.role === 'admin' || s.role === 'master') ? 'master' : 'user';
+      loginAs({ username: s.name || s.username, role: internalRole });
+      // Carrega registro se vier da página de Registros
+      const urlId = new URLSearchParams(window.location.search).get('id');
+      if (urlId) {
+        currentRecordId = urlId;
+        await loadRecord(urlId);
+      }
+    }
+  } catch(e) { console.error('Init error', e); }
+});
 
 // ═══ MODAL USUÁRIOS ═══
 function openModal(){document.getElementById('modal').classList.add('open');renderModal();}
@@ -1291,13 +1318,30 @@ function renderGerar(){
     </button>
   </div>`:''}
 
+  <div id="save-msg" style="margin-bottom:10px;font-size:12px;min-height:18px"></div>
+  ${isFinalized ? `
+  <div style="background:#052e16;border:1.5px solid #16a34a;border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#4ade80;font-weight:700">
+    ✅ Laudo finalizado — somente leitura. Para editar, reabra como rascunho em Registros.
+  </div>
+  ` : `
+  <div style="display:flex;gap:8px;margin-bottom:14px">
+    <button id="btn-save-draft" onclick="saveRecord('rascunho')"
+      style="flex:1;padding:11px;background:#1e293b;color:#94a3b8;border:1.5px solid #334155;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">
+      💾 Salvar Rascunho
+    </button>
+    <button id="btn-finalize" onclick="confirmFinalize()"
+      style="flex:1;padding:11px;background:#052e16;color:#4ade80;border:1.5px solid #16a34a;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">
+      ✅ Finalizar Laudo
+    </button>
+  </div>
+  `}
   <div id="gen-msg"></div>
   <div class="gen-btns">
-    <button class="btn-word" id="btn-word" onclick="doGenerate('docx')">📝 Word (.doc)</button>
+    ${!isFinalized ? `<button class="btn-word" id="btn-word" onclick="doGenerate('docx')">📝 Word (.doc)</button>` : ''}
     <button class="btn-pdf" id="btn-pdf" onclick="doGenerate('pdf')">📄 PDF</button>
     <button class="btn-qr" id="btn-qr" onclick="showQR()">📱 QR Code</button>
   </div>
-  <p class="gen-note">Word: baixa .doc · PDF: abre para imprimir/salvar · QR: compartilha resumo</p>`;
+  <p class="gen-note">${isFinalized ? 'PDF: abre para imprimir/salvar · QR: compartilha resumo' : 'Word: baixa .doc · PDF: abre para imprimir/salvar · QR: compartilha resumo'}</p>`;
 }
 
 // ═══ PHOTO HELPERS ═══
@@ -2756,11 +2800,13 @@ async function doGenerate(type){
       setTimeout(cleanup,60000); // fallback limpeza após 60s
       if(msg) msg.innerHTML=`<div class="msg-ok">✓ PDF aberto — clique em Imprimir e salve como PDF.<br/>
         <small style="color:#fbbf24">⚠️ No Chrome: Mais configurações → desmarque <b>Cabeçalhos e rodapés</b> para remover data/hora da impressão.</small></div>`;
+      saveRegistro('pdf');
     } else {
       const blob=new Blob([`<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'>${html}</html>`],{type:'application/msword'});
       const a=document.createElement('a');a.href=URL.createObjectURL(blob);
       a.download=`Laudo_VP${formData.vp_numero}_${formData.num_relatorio.replace(/[^\w]/g,'_')}.doc`;a.click();
       if(msg) msg.innerHTML=`<div class="msg-ok">✓ Arquivo Word baixado com sucesso!</div>`;
+      saveRegistro('docx');
     }
   }catch(e){
     if(pdfWin) pdfWin.close();
@@ -2771,5 +2817,146 @@ async function doGenerate(type){
 
 // ═══ INIT ═══
 updateHeader();
+</script>
+
+<!-- Firebase para salvar registros -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+// ── Salvar registro (rascunho ou finalizado) ──
+async function saveRecord(status) {
+  const btn = document.getElementById('btn-save-draft');
+  const btnF = document.getElementById('btn-finalize');
+  const msgEl = document.getElementById('save-msg');
+  if (btn) btn.disabled = true;
+  if (btnF) btnF.disabled = true;
+  if (msgEl) msgEl.innerHTML = '<span style="color:#f59e0b">⏳ Salvando...</span>';
+
+  try {
+    var s = JSON.parse(localStorage.getItem('alc_session') || 'null');
+    if (!s) throw new Error('Sessão expirada');
+    var db = firebase.firestore();
+
+    // Dados textuais para Firestore (sem imagens)
+    const firestoreData = {
+      status,
+      modulo: 'NR-13',
+      cliente: formData.cliente_nome || formData.cliente || '',
+      vp: formData.vp_numero || '',
+      relatorio: formData.num_relatorio || '',
+      data_inspecao: formData.data_inicio || '',
+      local: formData.local || '',
+      usuario: s.name || s.username,
+      uid: s.uid,
+      formData: JSON.parse(JSON.stringify(formData)),
+      checkboxes: JSON.parse(JSON.stringify(checkboxes)),
+      itensInspecao: JSON.parse(JSON.stringify(itensInspecao)),
+      acoesExec: JSON.parse(JSON.stringify(acoesExec)),
+      regionValues: {
+        costado:  regions.costado.map(p=>({value: p.value})),
+        tampoDir: regions.tampoDir.map(p=>({value: p.value})),
+        tampoEsq: regions.tampoEsq.map(p=>({value: p.value})),
+      },
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+
+    let docRef;
+    if (currentRecordId) {
+      docRef = db.collection('registros').doc(currentRecordId);
+      await docRef.update(firestoreData);
+    } else {
+      firestoreData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+      docRef = await db.collection('registros').add(firestoreData);
+      currentRecordId = docRef.id;
+      // Atualiza URL sem recarregar
+      history.replaceState({}, '', '?id=' + currentRecordId);
+    }
+
+    // Salva imagens em localStorage (same-device continuation)
+    try {
+      const fullState = {
+        formData: JSON.parse(JSON.stringify(formData)),
+        checkboxes: JSON.parse(JSON.stringify(checkboxes)),
+        itensInspecao: JSON.parse(JSON.stringify(itensInspecao)),
+        acoesExec: JSON.parse(JSON.stringify(acoesExec)),
+        regions: JSON.parse(JSON.stringify(regions)),
+        extras: JSON.parse(JSON.stringify(extras)),
+        artPages: JSON.parse(JSON.stringify(artPages)),
+        calibPages: JSON.parse(JSON.stringify(calibPages)),
+      };
+      localStorage.setItem('alc_draft_' + currentRecordId, JSON.stringify(fullState));
+    } catch(lsErr) { /* localStorage cheio — só texto no Firestore */ }
+
+    if (status === 'finalizado') {
+      isFinalized = true;
+      renderTabNav(); renderContent();
+    }
+
+    if (msgEl) msgEl.innerHTML = status === 'finalizado'
+      ? '<span style="color:#22c55e">✅ Laudo finalizado! Apenas PDF e QR Code disponíveis.</span>'
+      : '<span style="color:#22c55e">💾 Rascunho salvo! Acesse em "Últimos Registros" para continuar.</span>';
+  } catch(e) {
+    if (msgEl) msgEl.innerHTML = '<span style="color:#ef4444">Erro ao salvar: ' + e.message + '</span>';
+  } finally {
+    if (btn) btn.disabled = false;
+    if (btnF) btnF.disabled = false;
+  }
+}
+
+// ── Carregar registro ──
+async function loadRecord(id) {
+  try {
+    var db = firebase.firestore();
+    const doc = await db.collection('registros').doc(id).get();
+    if (!doc.exists) { alert('Registro não encontrado.'); return; }
+
+    const data = doc.data();
+    isFinalized = data.status === 'finalizado';
+
+    // Restaura dados textuais do Firestore
+    if (data.formData) Object.assign(formData, data.formData);
+    if (data.checkboxes) Object.assign(checkboxes, data.checkboxes);
+    if (data.itensInspecao) { itensInspecao.length = 0; itensInspecao.push(...data.itensInspecao); }
+    if (data.acoesExec) { acoesExec.length = 0; acoesExec.push(...data.acoesExec); }
+
+    // Restaura imagens do localStorage (se disponíveis)
+    try {
+      const fullState = JSON.parse(localStorage.getItem('alc_draft_' + id) || 'null');
+      if (fullState) {
+        if (fullState.regions) Object.assign(regions, fullState.regions);
+        if (fullState.extras) Object.assign(extras, fullState.extras);
+        if (fullState.artPages) { artPages.length = 0; artPages.push(...fullState.artPages); }
+        if (fullState.calibPages) Object.assign(calibPages, fullState.calibPages);
+      } else if (data.regionValues) {
+        // Só os valores numéricos, sem imagens
+        regions.costado  = data.regionValues.costado  || [];
+        regions.tampoDir = data.regionValues.tampoDir || [];
+        regions.tampoEsq = data.regionValues.tampoEsq || [];
+      }
+    } catch(e) {}
+
+    // Navega para a aba Gerar
+    currentTab = 'gerar';
+    renderTabNav(); renderContent(); updateHeader();
+  } catch(e) {
+    alert('Erro ao carregar registro: ' + e.message);
+  }
+}
+
+function confirmFinalize() {
+  if (confirm('Finalizar o laudo?\n\nApós finalizar, não será possível editar os dados. Você ainda poderá gerar PDF e QR Code.')) {
+    saveRecord('finalizado');
+  }
+}
+
+// ── Salva automaticamente ao gerar PDF/Word ──
+async function saveRegistro(tipo) {
+  if (!currentRecordId && isFinalized) return;
+  // Se já finalizado, não salva novamente
+  if (!isFinalized) {
+    await saveRecord(isFinalized ? 'finalizado' : 'rascunho');
+  }
+}
 </script>
 </body></html>
