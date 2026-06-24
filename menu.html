@@ -181,6 +181,21 @@
       letter-spacing: 0.5px;
     }
 
+    /* ── Registros Card ── */
+    .registros-card {
+      display: flex; align-items: center; justify-content: space-between;
+      background: #fff; border-radius: 12px;
+      padding: 16px 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      border: 1.5px solid #e2e8f0;
+      text-decoration: none; color: inherit;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .registros-card:hover {
+      border-color: #212F62;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    }
+
     /* ── Admin Panel Link ── */
     .admin-section {
       display: none;
@@ -287,7 +302,7 @@
   <!-- Module Cards -->
   <div class="modules">
 
-    <!-- NR-13 — ATIVO -->
+    <!-- Inspeção NR-13 — ATIVO -->
     <a class="module-card active-module" href="Laudo-VP-NR13.html">
       <div class="module-icon blue">🔧</div>
       <div class="module-title">Inspeção NR-13</div>
@@ -302,7 +317,7 @@
       <div class="module-desc">Calibração de válvula de segurança e manômetro. Emissão de certificado.</div>
     </div>
 
-    <!-- Prontuário — EM BREVE -->
+    <!-- Reconstituição de Prontuário — EM BREVE -->
     <div class="module-card soon-module disabled">
       <span class="soon-tag">Em breve</span>
       <div class="module-icon gray">📋</div>
@@ -310,6 +325,22 @@
       <div class="module-desc">Reconstituição e organização do prontuário do vaso de pressão conforme NR-13.</div>
     </div>
 
+  </div>
+
+  <!-- Últimos Registros — seção transversal -->
+  <div style="margin-bottom: 24px;">
+    <a href="registros.html" class="registros-card">
+      <div style="display:flex; align-items:center; gap:14px;">
+        <div style="font-size:28px; line-height:1;">🗂️</div>
+        <div>
+          <div style="font-size:15px; font-weight:800; color:#1e293b;">Últimos Registros</div>
+          <div style="font-size:13px; color:#64748b; margin-top:2px;">
+            Histórico de todos os trabalhos — NR-13, Calibração e Prontuário.
+          </div>
+        </div>
+      </div>
+      <div style="font-size:20px; color:#94a3b8;">›</div>
+    </a>
   </div>
 
   <!-- Admin Section (visível só para admin/master) -->
@@ -339,11 +370,10 @@
     <span>Calibração</span>
     <span class="bnav-soon">em breve</span>
   </div>
-  <div class="bnav-item disabled">
-    <span class="bnav-icon">📋</span>
-    <span>Prontuário</span>
-    <span class="bnav-soon">em breve</span>
-  </div>
+  <a class="bnav-item" href="registros.html">
+    <span class="bnav-icon">🗂️</span>
+    <span>Registros</span>
+  </a>
   <a class="bnav-item" href="admin.html" id="bnav-admin" style="display:none">
     <span class="bnav-icon">⚙</span>
     <span>Admin</span>
