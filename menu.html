@@ -225,9 +225,33 @@
     @media (max-width: 500px) {
       .user-chip .name { display: none; }
       .topbar-title { font-size: 14px; }
-      .main { padding: 24px 16px; }
+      .main { padding: 24px 16px 90px; }
       .welcome h2 { font-size: 18px; }
     }
+
+    /* ── Bottom Nav ── */
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: #1e293b; border-top: 1px solid #334155;
+      display: flex; z-index: 500;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .bnav-item {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 8px 4px; text-decoration: none;
+      color: #94a3b8; font-size: 10px; font-weight: 700;
+      gap: 3px; border: none; background: none;
+      cursor: pointer; font-family: inherit; transition: color .15s;
+    }
+    .bnav-item.active { color: #3b82f6; }
+    .bnav-item.disabled { opacity: 0.4; cursor: default; pointer-events: none; }
+    .bnav-item .bnav-icon { font-size: 20px; line-height: 1; }
+    .bnav-item .bnav-soon {
+      font-size: 8px; background: #334155; color: #94a3b8;
+      padding: 1px 5px; border-radius: 4px; letter-spacing: .3px;
+    }
+    .main { padding-bottom: 90px; }
   </style>
 </head>
 <body>
@@ -300,6 +324,32 @@
   </div>
 </div>
 
+<!-- Bottom Navigation -->
+<nav class="bottom-nav">
+  <a class="bnav-item active" href="menu.html">
+    <span class="bnav-icon">🏠</span>
+    <span>Menu</span>
+  </a>
+  <a class="bnav-item" href="Laudo-VP-NR13.html">
+    <span class="bnav-icon">🔧</span>
+    <span>NR-13</span>
+  </a>
+  <div class="bnav-item disabled">
+    <span class="bnav-icon">⚙️</span>
+    <span>Calibração</span>
+    <span class="bnav-soon">em breve</span>
+  </div>
+  <div class="bnav-item disabled">
+    <span class="bnav-icon">📋</span>
+    <span>Prontuário</span>
+    <span class="bnav-soon">em breve</span>
+  </div>
+  <a class="bnav-item" href="admin.html" id="bnav-admin" style="display:none">
+    <span class="bnav-icon">⚙</span>
+    <span>Admin</span>
+  </a>
+</nav>
+
 <!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -328,6 +378,7 @@
     // Mostra painel admin para admin/master
     if (session.role === 'admin' || session.role === 'master') {
       document.getElementById('admin-section').classList.add('visible');
+      document.getElementById('bnav-admin').style.display = '';
     }
   }
 

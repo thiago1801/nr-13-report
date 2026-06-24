@@ -58,7 +58,29 @@ input,button,select,textarea{font-family:inherit;}
 .tab-nav::-webkit-scrollbar{display:none;}
 .tab-nav button{padding:10px 13px;border:none;background:none;cursor:pointer;font-size:11px;font-weight:700;white-space:nowrap;color:var(--muted);border-bottom:2px solid transparent;transition:all .2s;}
 .tab-nav button.active{color:var(--accent);border-bottom-color:var(--accent);}
-.content{flex:1;overflow-y:auto;padding:16px;max-width:760px;width:100%;margin:0 auto;}
+.content{flex:1;overflow-y:auto;padding:16px 16px 80px;max-width:760px;width:100%;margin:0 auto;}
+
+/* ── Bottom Nav ── */
+.bottom-nav{
+  position:fixed;bottom:0;left:0;right:0;
+  background:var(--card);border-top:1px solid var(--border);
+  display:flex;z-index:500;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.bnav-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:8px 4px;text-decoration:none;color:var(--muted);
+  font-size:10px;font-weight:700;gap:3px;
+  border:none;background:none;cursor:pointer;font-family:inherit;
+  transition:color .15s;
+}
+.bnav-item.active{color:var(--accent);}
+.bnav-item.disabled{opacity:0.4;cursor:default;pointer-events:none;}
+.bnav-item .bnav-icon{font-size:20px;line-height:1;}
+.bnav-item .bnav-soon{
+  font-size:8px;background:#334155;color:#94a3b8;
+  padding:1px 5px;border-radius:4px;letter-spacing:.3px;
+}
 
 /* FIELDS */
 .sec-title{font-size:14px;font-weight:800;color:var(--text);margin-bottom:4px;}
@@ -287,6 +309,28 @@ input,button,select,textarea{font-family:inherit;}
   </div>
   <div class="tab-nav" id="tab-nav"></div>
   <div class="content" id="content"></div>
+
+  <!-- Bottom Navigation -->
+  <nav class="bottom-nav">
+    <a class="bnav-item active" href="Laudo-VP-NR13.html">
+      <span class="bnav-icon">🔧</span>
+      <span>NR-13</span>
+    </a>
+    <div class="bnav-item disabled">
+      <span class="bnav-icon">⚙️</span>
+      <span>Calibração</span>
+      <span class="bnav-soon">em breve</span>
+    </div>
+    <div class="bnav-item disabled">
+      <span class="bnav-icon">📋</span>
+      <span>Prontuário</span>
+      <span class="bnav-soon">em breve</span>
+    </div>
+    <a class="bnav-item" href="admin.html" id="bnav-admin" style="display:none">
+      <span class="bnav-icon">⚙</span>
+      <span>Admin</span>
+    </a>
+  </nav>
 </div>
 <script>
 // ═══ STORAGE ═══
@@ -447,6 +491,13 @@ function loginAs(u){
   document.getElementById('app').style.display='flex';
   document.getElementById('hdr-user').textContent='👤 '+u.username;
   if(u.role==='master') document.getElementById('btn-approve').style.display='';
+  // Mostra botão Admin na bottom nav para admin/master
+  try {
+    var s = JSON.parse(localStorage.getItem('alc_session')||'null');
+    if (s && (s.role==='admin'||s.role==='master')) {
+      document.getElementById('bnav-admin').style.display='';
+    }
+  } catch(e){}
   renderTabNav();renderContent();updateHeader();
 }
 function logout(){location.reload();}
