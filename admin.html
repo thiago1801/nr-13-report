@@ -276,6 +276,12 @@
   const db   = firebase.firestore();
   const auth = firebase.auth();
 
+  // App secundário para criar usuários sem deslogar o admin
+  const _cfg = firebase.app().options;
+  const secondaryApp  = firebase.apps.find(a => a.name === 'secondary') ||
+                        firebase.initializeApp(_cfg, 'secondary');
+  const secondaryAuth = secondaryApp.auth();
+
   let editingUid = null;
   let allUsers   = [];
 
@@ -372,23 +378,16 @@
 
       if (editingUid) {
         // Editar usuário existente
-        const profileUpdate = { name, username, role };
+        const profileUpdate = { name, username, role, email: googleEmail || null };
         await db.collection('users').doc(editingUid).update(profileUpdate);
-
-        if (password) {
-          // Atualiza senha via Firebase (requer re-auth ou admin SDK — simplificado aqui)
-          // Nota: atualizar senha de outro usuário requer Firebase Admin SDK (backend)
-          // Por ora, registrar flag para reset no próximo login
-          await db.collection('users').doc(editingUid).update({ pendingPasswordReset: password });
-        }
-
         showToast('Usuário atualizado com sucesso!', 'success');
       } else {
-        // Criar novo usuário
-        // Cria no Firebase Auth
-        const cred = await auth.createUserWithEmailAndPassword(email, password);
+        // Criar novo usuário via app secundário (não desloga o admin)
+        const cred = await secondaryAuth.createUserWithEmailAndPassword(email, password);
+        const newUid = cred.user.uid;
+        await secondaryAuth.signOut();
         // Salva perfil no Firestore
-        await db.collection('users').doc(cred.user.uid).set({
+        await db.collection('users').doc(newUid).set({
           username, name, role, active: true,
           email: googleEmail || null,
           createdAt: firebase.firestore.FieldValue.serverTimestamp(),
