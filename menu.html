@@ -84,6 +84,22 @@
     }
     .btn-logout:hover { background: rgba(255,255,255,0.2); }
 
+    .btn-manage {
+      display: none;
+      background: #C81F25;
+      border: none;
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+    .btn-manage:hover { background: #a81a20; }
+    .btn-manage.visible { display: inline-block; }
+
     /* ── Main Content ── */
     .main {
       max-width: 900px;
@@ -196,6 +212,16 @@
       box-shadow: 0 4px 16px rgba(0,0,0,0.1);
     }
 
+    /* ── Registros Card ── */
+    .registros-card {
+      display: flex; align-items: center; justify-content: space-between;
+      background: #fff; border-radius: 12px; padding: 18px 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1.5px solid #e2e8f0;
+      text-decoration: none; color: inherit;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .registros-card:hover { border-color: #212F62; box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+
     /* ── Admin Panel Link ── */
     .admin-section {
       display: none;
@@ -240,33 +266,9 @@
     @media (max-width: 500px) {
       .user-chip .name { display: none; }
       .topbar-title { font-size: 14px; }
-      .main { padding: 24px 16px 90px; }
+      .main { padding: 24px 16px 32px; }
       .welcome h2 { font-size: 18px; }
     }
-
-    /* ── Bottom Nav ── */
-    .bottom-nav {
-      position: fixed; bottom: 0; left: 0; right: 0;
-      background: #1e293b; border-top: 1px solid #334155;
-      display: flex; z-index: 500;
-      padding-bottom: env(safe-area-inset-bottom);
-    }
-    .bnav-item {
-      flex: 1; display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      padding: 8px 4px; text-decoration: none;
-      color: #94a3b8; font-size: 10px; font-weight: 700;
-      gap: 3px; border: none; background: none;
-      cursor: pointer; font-family: inherit; transition: color .15s;
-    }
-    .bnav-item.active { color: #3b82f6; }
-    .bnav-item.disabled { opacity: 0.4; cursor: default; pointer-events: none; }
-    .bnav-item .bnav-icon { font-size: 20px; line-height: 1; }
-    .bnav-item .bnav-soon {
-      font-size: 8px; background: #334155; color: #94a3b8;
-      padding: 1px 5px; border-radius: 4px; letter-spacing: .3px;
-    }
-    .main { padding-bottom: 90px; }
   </style>
 </head>
 <body>
@@ -288,6 +290,7 @@
       <span class="name" id="user-name">Usuário</span>
       <span class="role-badge" id="user-role-badge">—</span>
     </div>
+    <a class="btn-manage" id="btn-manage" href="admin.html">⚙ Usuários</a>
     <button class="btn-logout" onclick="doLogout()">Sair</button>
   </div>
 </div>
@@ -309,13 +312,12 @@
       <div class="module-desc">Laudo de vaso de pressão conforme NR-13. Geração de PDF completo com QR Code.</div>
     </a>
 
-    <!-- Calibração — EM BREVE -->
-    <div class="module-card soon-module disabled">
-      <span class="soon-tag">Em breve</span>
+    <!-- Calibração — ATIVO -->
+    <a class="module-card active-module" href="calibracao.html">
       <div class="module-icon orange">⚙️</div>
       <div class="module-title">Calibração</div>
       <div class="module-desc">Calibração de válvula de segurança e manômetro. Emissão de certificado.</div>
-    </div>
+    </a>
 
     <!-- Reconstituição de Prontuário — EM BREVE -->
     <div class="module-card soon-module disabled">
@@ -325,60 +327,30 @@
       <div class="module-desc">Reconstituição e organização do prontuário do vaso de pressão conforme NR-13.</div>
     </div>
 
+    <!-- Calendário — ATIVO -->
+    <a class="module-card active-module" href="calendario.html">
+      <div class="module-icon" style="background:#fef3c7">📅</div>
+      <div class="module-title">Agenda / Calendário</div>
+      <div class="module-desc">Próximos vencimentos de inspeção, calibração e prontuário. Alertas por e-mail e Google Agenda.</div>
+    </a>
+
   </div>
 
-  <!-- Últimos Registros — seção transversal -->
-  <div style="margin-bottom: 24px;">
+  <!-- Últimos Registros — faixa larga -->
+  <div style="margin-bottom:24px">
     <a href="registros.html" class="registros-card">
-      <div style="display:flex; align-items:center; gap:14px;">
-        <div style="font-size:28px; line-height:1;">🗂️</div>
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="font-size:28px;line-height:1">🗂️</div>
         <div>
-          <div style="font-size:15px; font-weight:800; color:#1e293b;">Últimos Registros</div>
-          <div style="font-size:13px; color:#64748b; margin-top:2px;">
-            Histórico de todos os trabalhos — NR-13, Calibração e Prontuário.
-          </div>
+          <div style="font-size:15px;font-weight:800;color:#1e293b">Últimos Registros</div>
+          <div style="font-size:13px;color:#64748b;margin-top:2px">Histórico de todos os trabalhos — NR-13, Calibração e Prontuário.</div>
         </div>
       </div>
-      <div style="font-size:20px; color:#94a3b8;">›</div>
+      <div style="font-size:22px;color:#94a3b8">›</div>
     </a>
   </div>
 
-  <!-- Admin Section (visível só para admin/master) -->
-  <div class="admin-section" id="admin-section">
-    <div class="admin-card">
-      <div>
-        <h3>⚙ Gerenciar Usuários</h3>
-        <p>Adicionar, editar ou desativar usuários do sistema.</p>
-      </div>
-      <a class="btn-admin" href="admin.html">Abrir</a>
-    </div>
-  </div>
 </div>
-
-<!-- Bottom Navigation -->
-<nav class="bottom-nav">
-  <a class="bnav-item active" href="menu.html">
-    <span class="bnav-icon">🏠</span>
-    <span>Menu</span>
-  </a>
-  <a class="bnav-item" href="Laudo-VP-NR13.html">
-    <span class="bnav-icon">🔧</span>
-    <span>NR-13</span>
-  </a>
-  <div class="bnav-item disabled">
-    <span class="bnav-icon">⚙️</span>
-    <span>Calibração</span>
-    <span class="bnav-soon">em breve</span>
-  </div>
-  <a class="bnav-item" href="registros.html">
-    <span class="bnav-icon">🗂️</span>
-    <span>Registros</span>
-  </a>
-  <a class="bnav-item" href="admin.html" id="bnav-admin" style="display:none">
-    <span class="bnav-icon">⚙</span>
-    <span>Admin</span>
-  </a>
-</nav>
 
 <!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -405,10 +377,9 @@
     document.getElementById('user-role-badge').textContent = roleLabels[session.role] || session.role;
     document.getElementById('welcome-msg').textContent   = 'Olá, ' + (session.name || session.username) + '!';
 
-    // Mostra painel admin para admin/master
+    // Mostra botão de usuários para admin/master
     if (session.role === 'admin' || session.role === 'master') {
-      document.getElementById('admin-section').classList.add('visible');
-      document.getElementById('bnav-admin').style.display = '';
+      document.getElementById('btn-manage').classList.add('visible');
     }
   }
 
