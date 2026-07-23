@@ -608,7 +608,7 @@ function renderCapa(){
     ${renderSinglePhoto('fotoEquip','Foto do Equipamento (Seção 2)')}
   </div>
 
-  ${fld('Nome do Cliente','cliente_nome')}
+  <div class="field-mb full"><label class="field-lbl">Nome do Cliente</label><input class="field-inp" type="text" value="${(formData.cliente_nome||'').replace(/"/g,'&quot;')}" oninput="formData['cliente_nome']=this.value;updateHeader();syncGeralFromCapa()"/></div>
   ${fld('Endereço (Rua, Número, Bairro)','cliente_end')}
   ${fld('Cidade / Estado / CEP','cliente_cidade')}
   ${fld('CNPJ','cliente_cnpj','half')}
@@ -627,10 +627,20 @@ function renderCapa(){
   </div>`;
 }
 
+function syncGeralFromCapa(){
+  // Preenche automaticamente o Cliente da seção 4 com o Nome do Cliente da Capa,
+  // a menos que o usuário já tenha editado o campo Cliente manualmente na seção 4.
+  if(formData.cliente_manual!=='1'){
+    formData.cliente=formData.cliente_nome||'';
+  }
+}
 function renderGeral(){
+  if(formData.cliente_manual!=='1'){
+    formData.cliente=formData.cliente_nome||formData.cliente||'';
+  }
   return `<div class="sec-title">📋 4. Informações Gerais</div>
   <div class="row2">
-    ${fld('Cliente','cliente')}
+    <div class="field-mb full"><label class="field-lbl">Cliente</label><input class="field-inp" type="text" value="${(formData.cliente||'').replace(/"/g,'&quot;')}" oninput="formData['cliente_manual']='1';formData['cliente']=this.value;updateHeader()"/></div>
     ${fld('Identificação do Equipamento','identificacao')}
     ${fld('Tag','tag','half')}
     ${fld('Local','local','half')}
@@ -723,8 +733,8 @@ function renderVaso(){
   <div class="row2">
     <div class="field-mb half">
       <label class="field-lbl">Volume Interno (Litros)</label>
-      <input class="field-inp" type="number" step="0.1" value="${formData.volume_litros||''}"
-        oninput="formData['volume_litros']=this.value;formData['volume_m3']=(parseFloat(this.value.replace(',','.'))/1000).toFixed(4).replace('.',',');calcPV();renderContent()"/>
+      <input class="field-inp" type="text" inputmode="decimal" value="${formData.volume_litros||''}"
+        onchange="formData['volume_litros']=this.value;formData['volume_m3']=(parseFloat(this.value.replace(',','.'))/1000).toFixed(4).replace('.',',');calcPV();renderContent()"/>
     </div>
     <div class="field-mb half">
       <label class="field-lbl">Volume em m³ (calculado)</label>
@@ -822,6 +832,19 @@ function renderAcoes(){
 function addAcao(){acoesExec.push({acao:'',prazo:'',statusExec:'',resp:''});renderContent();}
 function removeAcao(i){if(acoesExec.length>1){acoesExec.splice(i,1);renderContent();}}
 
+// Preenche automaticamente as Espessuras Mínimas Calculadas (seção 10) com os valores
+// calculados nos Memoriais de Cálculo (seção 9), a menos que o usuário já os tenha editado manualmente.
+function syncEspMinCalc(eCostado,eTampo){
+  if(eCostado>0 && formData.esp_min_calc_costado_manual!=='1'){
+    formData.esp_min_calc_costado=eCostado.toFixed(2).replace('.',',');
+  }
+  if(eTampo>0 && formData.esp_min_calc_tampo_manual!=='1'){
+    const v=eTampo.toFixed(2).replace('.',',');
+    formData.esp_min_calc_tampo_dir=v;
+    formData.esp_min_calc_tampo_esq=v;
+  }
+}
+
 function renderMemorial(){
   // Valores calculados
   const P=parseFloat((formData.mem_pressao_mpa||'0').replace(',','.'))||0;
@@ -834,6 +857,7 @@ function renderMemorial(){
   const Et=parseFloat((formData.mem_efic_tampo||'0').replace(',','.'))||0;
   const Ct=parseFloat((formData.mem_sobrec_tampo||'0').replace(',','.'))||0;
   const eTampo=isFinite((P*R)/(St*Et-0.1*P)+Ct)&&St*Et-0.1*P>0?(P*R)/(St*Et-0.1*P)+Ct:0;
+  syncEspMinCalc(eCostado,eTampo);
 
   // Tabela completa de tipos de aço conforme ASME/ASTM
   const steelTypes=[
@@ -1078,11 +1102,12 @@ function renderEspessura(){
     ${fld('Diâmetro','diametro','half')}
   </div>
   <div style="background:#12151f;border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:14px">
-    <div class="cb-group-title" style="margin-bottom:8px">Espessuras Mínimas Calculadas (mm)</div>
+    <div class="cb-group-title" style="margin-bottom:2px">Espessuras Mínimas Calculadas (mm)</div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:8px">Preenchido automaticamente a partir da seção 9 — Memoriais de Cálculo. Pode ser editado manualmente se necessário.</div>
     <div class="row2">
-      ${fld('Costado','esp_min_calc_costado','third')}
-      ${fld('Tampo '+tL.dir,'esp_min_calc_tampo_dir','third')}
-      ${fld('Tampo '+tL.esq,'esp_min_calc_tampo_esq','third')}
+      <div class="field-mb third"><label class="field-lbl">Costado</label><input class="field-inp" type="text" value="${(formData.esp_min_calc_costado||'').replace(/"/g,'&quot;')}" oninput="formData['esp_min_calc_costado_manual']='1';formData['esp_min_calc_costado']=this.value"/></div>
+      <div class="field-mb third"><label class="field-lbl">Tampo ${tL.dir}</label><input class="field-inp" type="text" value="${(formData.esp_min_calc_tampo_dir||'').replace(/"/g,'&quot;')}" oninput="formData['esp_min_calc_tampo_manual']='1';formData['esp_min_calc_tampo_dir']=this.value"/></div>
+      <div class="field-mb third"><label class="field-lbl">Tampo ${tL.esq}</label><input class="field-inp" type="text" value="${(formData.esp_min_calc_tampo_esq||'').replace(/"/g,'&quot;')}" oninput="formData['esp_min_calc_tampo_manual']='1';formData['esp_min_calc_tampo_esq']=this.value"/></div>
     </div>
   </div>
   ${renderRegion('costado','🔵 Costado','#60a5fa',2)}
@@ -1487,6 +1512,7 @@ function updateMemorialResults(){
   const Et=parseFloat((formData.mem_efic_tampo||'0').replace(',','.'))||0;
   const Ct=parseFloat((formData.mem_sobrec_tampo||'0').replace(',','.'))||0;
   const eTampo=isFinite((P*R)/(St*Et-0.1*P)+Ct)&&St*Et-0.1*P>0?(P*R)/(St*Et-0.1*P)+Ct:0;
+  syncEspMinCalc(eCostado,eTampo);
 
   const avgC=calcAvg(regions.costado);
   const avgT=getMinTampoAvg();
@@ -2982,6 +3008,11 @@ updateHeader();
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script>
+// ── Garante que o Firebase Auth restaure a sessão antes de qualquer gravação ──
+let _authReadyResolve;
+const authReady = new Promise(resolve => { _authReadyResolve = resolve; });
+firebase.auth().onAuthStateChanged(user => { _authReadyResolve(user); });
+
 // ── Salvar registro (rascunho ou finalizado) ──
 async function saveRecord(status) {
   const btn = document.getElementById('btn-save-draft');
@@ -2994,6 +3025,8 @@ async function saveRecord(status) {
   try {
     var s = JSON.parse(localStorage.getItem('alc_session') || 'null');
     if (!s) throw new Error('Sessão expirada');
+    const authUser = await authReady;
+    if (!authUser) throw new Error('Sessão do Firebase expirada. Saia e faça login novamente.');
     var db = firebase.firestore();
 
     // Dados textuais para Firestore (sem imagens)
