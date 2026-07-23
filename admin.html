@@ -268,8 +268,8 @@
 
   if (!session) {
     window.location.replace('login.html');
-  } else if (session.role !== 'admin') {
-    alert('Acesso restrito ao administrador.');
+  } else if (session.role === 'campo') {
+    alert('Acesso restrito a administrador/master.');
     window.location.replace('menu.html');
   }
 
