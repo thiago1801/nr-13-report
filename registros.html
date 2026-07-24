@@ -61,7 +61,7 @@
     }
 
     /* ── Main ── */
-    .main { max-width: 780px; margin: 0 auto; padding: 16px 20px 100px; }
+    .main { max-width: 780px; margin: 0 auto; padding: 16px 20px 32px; }
 
     /* ── Cards ── */
     .rec-list { display: flex; flex-direction: column; gap: 10px; }
@@ -110,32 +110,39 @@
 
     .loading { text-align: center; padding: 40px; color: #94a3b8; font-size: 14px; }
 
-    /* ── Bottom Nav ── */
-    .bottom-nav {
-      position: fixed; bottom: 0; left: 0; right: 0;
-      background: #1e293b; border-top: 1px solid #334155;
-      display: flex; z-index: 500;
-      padding-bottom: env(safe-area-inset-bottom);
+    .badge-legado { background: #fdf4ff; color: #7c3aed; }
+    .rec-file-link {
+      display: inline-block; margin-top: 6px; font-size: 11px; font-weight: 700;
+      color: #212F62; text-decoration: none; padding: 4px 10px;
+      background: #eff6ff; border-radius: 6px;
     }
-    .bnav-item {
-      flex: 1; display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      padding: 8px 4px; text-decoration: none;
-      color: #94a3b8; font-size: 10px; font-weight: 700;
-      gap: 3px; border: none; background: none;
-      cursor: pointer; font-family: inherit; transition: color .15s;
+    .rec-file-link:hover { background: #dbeafe; }
+
+    /* ── Modal upload laudo anterior ── */
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300;
+      display: none; align-items: center; justify-content: center; padding: 16px; }
+    .overlay.open { display: flex; }
+    .modal { background: #fff; border-radius: 14px; padding: 24px; width: 100%;
+      max-width: 460px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
+    .modal h3 { font-size: 16px; font-weight: 800; color: #212F62; margin-bottom: 16px; }
+    .field { margin-bottom: 12px; }
+    .field label { display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 5px; }
+    .field input, .field select {
+      width: 100%; padding: 10px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+      font-size: 13px; outline: none; font-family: inherit;
     }
-    .bnav-item.active { color: #3b82f6; }
-    .bnav-item.disabled { opacity: 0.4; cursor: default; pointer-events: none; }
-    .bnav-item .bnav-icon { font-size: 20px; line-height: 1; }
-    .bnav-item .bnav-soon {
-      font-size: 8px; background: #334155; color: #94a3b8;
-      padding: 1px 5px; border-radius: 4px; letter-spacing: .3px;
-    }
+    .field input:focus, .field select:focus { border-color: #212F62; }
+    .modal-err { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626;
+      border-radius: 8px; padding: 9px 12px; font-size: 13px; margin-bottom: 12px; display: none; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 6px; }
+    .btn-modal-save { flex: 1; background: #212F62; color: #fff; border: none; border-radius: 8px;
+      padding: 12px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; }
+    .btn-modal-cancel { flex: 1; background: #f1f5f9; color: #374151; border: none; border-radius: 8px;
+      padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; }
 
     @media (max-width: 500px) {
       .toolbar { padding: 16px 16px 0; }
-      .main { padding: 16px 16px 100px; }
+      .main { padding: 16px 16px 24px; }
     }
   </style>
 </head>
@@ -147,6 +154,7 @@
     <a class="back-btn" href="menu.html">← Menu</a>
     <h1>🗂️ Últimos Registros</h1>
   </div>
+  <button class="back-btn" onclick="openUploadModal()">📎 Adicionar laudo anterior</button>
 </div>
 
 <!-- Filtros -->
@@ -154,6 +162,7 @@
   <select class="filter-select" id="filter-modulo" onchange="applyFilters()">
     <option value="">Todos os módulos</option>
     <option value="NR-13">Inspeção NR-13</option>
+    <option value="Legado">Laudo anterior (upload)</option>
   </select>
   <select class="filter-select" id="filter-status" onchange="applyFilters()">
     <option value="">Todos os status</option>
@@ -175,34 +184,57 @@
   </div>
 </div>
 
-<!-- Bottom Nav -->
-<nav class="bottom-nav">
-  <a class="bnav-item" href="menu.html">
-    <span class="bnav-icon">🏠</span>
-    <span>Menu</span>
-  </a>
-  <a class="bnav-item" href="Laudo-VP-NR13.html">
-    <span class="bnav-icon">🔧</span>
-    <span>NR-13</span>
-  </a>
-  <div class="bnav-item disabled">
-    <span class="bnav-icon">⚙️</span>
-    <span>Calibração</span>
-    <span class="bnav-soon">em breve</span>
+<!-- Modal: Adicionar laudo anterior -->
+<div class="overlay" id="upload-overlay" onclick="if(event.target===this)closeUploadModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3>📎 Adicionar laudo anterior</h3>
+    <div class="modal-err" id="upload-err"></div>
+
+    <div class="field">
+      <label>Link ou local do arquivo (opcional)</label>
+      <input type="text" id="up-link" placeholder="Ex: link do Google Drive ou pasta no computador">
+    </div>
+    <div class="field">
+      <label>Cliente</label>
+      <input type="text" id="up-cliente" placeholder="Ex: CARBEL NISSAN CONTORNO">
+    </div>
+    <div class="field">
+      <label>Tag / Equipamento</label>
+      <input type="text" id="up-tag" placeholder="Ex: VP-01">
+    </div>
+    <div class="field">
+      <label>Local</label>
+      <input type="text" id="up-local" placeholder="Ex: Fábrica - Contagem/MG">
+    </div>
+    <div class="field">
+      <label>Data de realização (ART)</label>
+      <input type="text" id="up-data-realizacao" placeholder="dd/mm/aaaa">
+    </div>
+    <div class="field">
+      <label>Tipo de vencimento a controlar na Agenda</label>
+      <select id="up-tipo-venc">
+        <option value="data_prox_insp_ext">Próxima inspeção externa (NR-13)</option>
+        <option value="data_prox_insp_int">Próxima inspeção interna (NR-13)</option>
+        <option value="data_calib_manval">Calibração manômetro/válvula</option>
+        <option value="data_prox_calib">Próxima calibração</option>
+        <option value="data_prox_pront">Reconstituição de prontuário</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Data de realização do próximo serviço (vencimento)</label>
+      <input type="text" id="up-data-vencimento" placeholder="dd/mm/aaaa">
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" onclick="closeUploadModal()">Cancelar</button>
+      <button class="btn-modal-save" id="btn-upload-save" onclick="saveUpload()">Salvar</button>
+    </div>
   </div>
-  <div class="bnav-item disabled">
-    <span class="bnav-icon">📋</span>
-    <span>Prontuário</span>
-    <span class="bnav-soon">em breve</span>
-  </div>
-  <a class="bnav-item active" href="registros.html">
-    <span class="bnav-icon">🗂️</span>
-    <span>Registros</span>
-  </a>
-</nav>
+</div>
 
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 
@@ -220,6 +252,99 @@
   const db = firebase.firestore();
   let allRecords = [];
 
+  // Garante que o Firebase Auth restaure a sessão antes de ler/gravar no Firestore
+  let _authReadyResolve;
+  const authReady = new Promise(resolve => { _authReadyResolve = resolve; });
+  firebase.auth().onAuthStateChanged(user => { _authReadyResolve(user); });
+
+  // ── Parse de data BR (dd/mm/aaaa) ──
+  function parseBRDate(s) {
+    if (!s) return null;
+    const p = s.trim().split('/');
+    if (p.length !== 3) return null;
+    const d = new Date(+p[2], +p[1]-1, +p[0]);
+    return isNaN(d) ? null : d;
+  }
+
+  // ── Modal: Adicionar laudo anterior ──
+  function openUploadModal() {
+    document.getElementById('up-link').value = '';
+    document.getElementById('up-cliente').value = '';
+    document.getElementById('up-tag').value = '';
+    document.getElementById('up-local').value = '';
+    document.getElementById('up-data-realizacao').value = '';
+    document.getElementById('up-data-vencimento').value = '';
+    document.getElementById('up-tipo-venc').value = 'data_prox_insp_ext';
+    document.getElementById('upload-err').style.display = 'none';
+    document.getElementById('upload-overlay').classList.add('open');
+  }
+  function closeUploadModal() {
+    document.getElementById('upload-overlay').classList.remove('open');
+  }
+  function showUploadErr(msg) {
+    const el = document.getElementById('upload-err');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  async function saveUpload() {
+    const link = document.getElementById('up-link').value.trim();
+    const cliente = document.getElementById('up-cliente').value.trim();
+    const tag = document.getElementById('up-tag').value.trim();
+    const local = document.getElementById('up-local').value.trim();
+    const dataRealizacao = document.getElementById('up-data-realizacao').value.trim();
+    const tipoVenc = document.getElementById('up-tipo-venc').value;
+    const dataVencimento = document.getElementById('up-data-vencimento').value.trim();
+    const btn = document.getElementById('btn-upload-save');
+
+    document.getElementById('upload-err').style.display = 'none';
+
+    if (!cliente) { showUploadErr('Preencha o cliente.'); return; }
+    if (dataRealizacao && !parseBRDate(dataRealizacao)) { showUploadErr('Data de realização inválida. Use dd/mm/aaaa.'); return; }
+    if (dataVencimento && !parseBRDate(dataVencimento)) { showUploadErr('Data de vencimento inválida. Use dd/mm/aaaa.'); return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
+
+    try {
+      const authUser = await authReady;
+      if (!authUser) throw new Error('Sessão do Firebase expirada. Saia e faça login novamente.');
+
+      const formDataObj = {
+        cliente_nome: cliente,
+        tag_vaso: tag,
+        local: local,
+        data_termino: dataRealizacao,
+      };
+      if (dataVencimento) formDataObj[tipoVenc] = dataVencimento;
+
+      await db.collection('registros').add({
+        modulo: 'Legado',
+        status: 'finalizado',
+        cliente: cliente,
+        vp: '',
+        relatorio: '',
+        data_inspecao: dataRealizacao,
+        data_realizacao: dataRealizacao,
+        local: local,
+        usuario: session.name || session.username,
+        uid: session.uid,
+        formData: formDataObj,
+        arquivoLink: link || '',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+
+      closeUploadModal();
+      loadRecords();
+    } catch(e) {
+      showUploadErr('Erro ao salvar: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Salvar';
+    }
+  }
+
   // ── Formata data ──
   function fmtDate(ts) {
     if (!ts) return '—';
@@ -232,6 +357,7 @@
   function moduleIcon(m) {
     if (m === 'NR-13') return '🔧';
     if (m === 'Calibração') return '⚙️';
+    if (m === 'Legado') return '📎';
     return '📋';
   }
 
@@ -271,6 +397,12 @@
           actions += `<a class="btn-rec btn-continuar" href="Laudo-VP-NR13.html?id=${r.id}">📄 Abrir PDF / QR</a>`;
         }
       }
+      if (r.modulo === 'Legado' && r.arquivoLink) {
+        const isUrl = /^https?:\/\//i.test(r.arquivoLink);
+        actions += isUrl
+          ? `<a class="btn-rec btn-continuar" href="${r.arquivoLink}" target="_blank">📎 Abrir link do arquivo</a>`
+          : `<span class="btn-rec" style="background:#f8fafc">📎 ${r.arquivoLink}</span>`;
+      }
       if (session && (session.role === 'admin' || session.role === 'master')) {
         if (isFinal) {
           actions += `<button class="btn-rec btn-reabrir" onclick="reabrir('${r.id}')">🔓 Reabrir</button>`;
@@ -288,6 +420,7 @@
             <b>Rel.:</b> ${r.relatorio || '—'}<br>
             <b>Inspeção:</b> ${r.data_inspecao || '—'} &nbsp;·&nbsp;
             <b>Local:</b> ${r.local || '—'}<br>
+            <b>Data de realização (ART):</b> ${r.data_realizacao || '—'}<br>
             <b>Por:</b> ${r.usuario || '—'} &nbsp;·&nbsp;
             <b>Salvo:</b> ${fmtDate(r.updatedAt || r.createdAt)}
           </div>
@@ -319,6 +452,12 @@
   // ── Carrega do Firestore ──
   async function loadRecords() {
     try {
+      const authUser = await authReady;
+      if (!authUser) {
+        document.getElementById('rec-list').innerHTML =
+          `<div class="empty-state"><div class="icon">⚠️</div><strong>Sessão do Firebase expirada</strong><p>Saia e faça login novamente.</p></div>`;
+        return;
+      }
       let snap;
       try {
         snap = await db.collection('registros').orderBy('updatedAt', 'desc').limit(100).get();
@@ -345,6 +484,7 @@
   async function reabrir(id) {
     if (!confirm('Reabrir este laudo para edição?')) return;
     try {
+      await authReady;
       await db.collection('registros').doc(id).update({ status: 'rascunho', updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
       await loadRecords();
     } catch(e) { alert('Erro: ' + e.message); }
@@ -354,6 +494,7 @@
   async function excluir(id) {
     if (!confirm('Excluir este registro permanentemente?')) return;
     try {
+      await authReady;
       await db.collection('registros').doc(id).delete();
       try { localStorage.removeItem('alc_draft_' + id); } catch(e){}
       document.getElementById('card-' + id)?.remove();

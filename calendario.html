@@ -216,6 +216,7 @@
 
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script>
@@ -226,6 +227,12 @@ const session=(function(){
 })();
 if(!session){window.location.replace('login.html');}
 const db=firebase.firestore();
+
+// Garante que o Firebase Auth restaure a sessão antes de ler o Firestore
+// (sem isso, as regras de segurança veem o pedido como não autenticado e nada carrega)
+let _authReadyResolve;
+const authReady=new Promise(resolve=>{_authReadyResolve=resolve;});
+firebase.auth().onAuthStateChanged(user=>{_authReadyResolve(user);});
 
 // ── Estado ──
 let allEvents=[];
@@ -274,6 +281,7 @@ function extractFromRecord(rec){
     local:   f.local||f.localizacao||rec.local||'',
     end:     f.cliente_end||'',
     id:      rec.id,
+    realizadoEm: parseBR(f.data_termino||f.data_inicio||rec.data_inspecao||''),
   };
   const evts=[];
   const slots=[
@@ -470,7 +478,8 @@ function eventCard(e){
       </div>
     </div>
     <div style="font-size:11px;color:#64748b;margin-top:6px;border-top:1px solid #f1f5f9;padding-top:6px">
-      📋 ${e.label}${e.end?'<br>📍 '+e.end:''}
+      📋 ${e.label}${e.end?'<br>📍 '+e.end:''}<br>
+      🛠️ Data de realização (ART): <b>${e.realizadoEm?fmtDate(e.realizadoEm):'—'}</b> · 📅 Realização do próximo serviço: <b>${fmtDate(e.date)}</b>
     </div>
     <div class="ev-actions">
       <a class="btn-gcal" href="${gcal}" target="_blank">📅 Google Agenda</a>
@@ -504,6 +513,7 @@ function sendAlert(){
 // ── Carga ──
 async function loadMasterEmails(){
   try{
+    await authReady;
     const snap=await db.collection('users').get();
     masterEmails=snap.docs
       .map(d=>d.data())
@@ -514,6 +524,12 @@ async function loadMasterEmails(){
 
 async function loadEvents(){
   try{
+    const authUser=await authReady;
+    if(!authUser){
+      document.getElementById('ev-list').innerHTML=
+        `<div class="empty"><div class="icon">⚠️</div><strong>Sessão do Firebase expirada</strong><p style="margin-top:6px">Saia e faça login novamente.</p></div>`;
+      return;
+    }
     const snap=await db.collection('registros').limit(500).get();
     const raw=[];
     snap.docs.forEach(d=>{

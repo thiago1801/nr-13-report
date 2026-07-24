@@ -276,6 +276,12 @@
   const db   = firebase.firestore();
   const auth = firebase.auth();
 
+  // Garante que o Firebase Auth restaure a sessão antes de ler/gravar no Firestore
+  // (sem isso, as regras de segurança veem o pedido como não autenticado e falha com "Erro ao salvar")
+  let _authReadyResolve;
+  const authReady = new Promise(resolve => { _authReadyResolve = resolve; });
+  auth.onAuthStateChanged(user => { _authReadyResolve(user); });
+
   // App secundário para criar usuários sem deslogar o admin
   const _cfg = firebase.app().options;
   const secondaryApp  = firebase.apps.find(a => a.name === 'secondary') ||
@@ -296,11 +302,16 @@
   // ── Load Users ──
   async function loadUsers() {
     try {
+      const authUser = await authReady;
+      if (!authUser) {
+        document.getElementById('empty-state').textContent = 'Sessão do Firebase expirada. Saia e faça login novamente.';
+        return;
+      }
       const snap = await db.collection('users').orderBy('username').get();
       allUsers = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
       renderUsers();
     } catch(e) {
-      document.getElementById('empty-state').textContent = 'Erro ao carregar usuários.';
+      document.getElementById('empty-state').textContent = 'Erro ao carregar usuários: ' + e.message;
     }
   }
 
@@ -374,6 +385,8 @@
     btn.textContent = 'Salvando...';
 
     try {
+      const authUser = await authReady;
+      if (!authUser) throw new Error('Sessão do Firebase expirada. Saia e faça login novamente.');
       const email = username + '@alc.internal';
 
       if (editingUid) {
@@ -401,9 +414,11 @@
     } catch(e) {
       let msg = 'Erro ao salvar. Tente novamente.';
       if (e.code === 'auth/email-already-in-use') msg = 'Esse nome de usuário já está em uso.';
-      if (e.code === 'auth/weak-password') msg = 'Senha muito fraca. Use pelo menos 6 caracteres.';
-      if (e.message && !e.code) msg = e.message;
+      else if (e.code === 'auth/weak-password') msg = 'Senha muito fraca. Use pelo menos 6 caracteres.';
+      else if (e.code === 'permission-denied') msg = 'Permissão negada pelo Firestore ao salvar (regras de segurança): ' + (e.message || '');
+      else if (e.message) msg = '[' + (e.code||'erro') + '] ' + e.message;
       showModalErr(msg);
+      console.error('saveUser error:', e);
     } finally {
       btn.disabled = false;
       btn.textContent = 'Salvar';
@@ -420,11 +435,12 @@
   async function toggleActive(uid, makeActive) {
     if (!confirm(makeActive ? 'Ativar este usuário?' : 'Desativar este usuário?')) return;
     try {
+      await authReady;
       await db.collection('users').doc(uid).update({ active: makeActive });
       showToast(makeActive ? 'Usuário ativado.' : 'Usuário desativado.', 'success');
       loadUsers();
     } catch(e) {
-      showToast('Erro ao alterar usuário.', 'error');
+      showToast('Erro ao alterar usuário: ' + e.message, 'error');
     }
   }
 
