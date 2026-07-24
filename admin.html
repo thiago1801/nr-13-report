@@ -223,11 +223,11 @@
       <input type="text" id="f-name" placeholder="Ex: João da Silva">
     </div>
     <div class="field">
-      <label>Usuário (login)</label>
+      <label>Usuário (login) <span style="font-weight:400;color:#94a3b8">(sem @, ex: joao.silva — não é o e-mail)</span></label>
       <input type="text" id="f-username" placeholder="Ex: joao.silva" autocapitalize="none">
     </div>
     <div class="field">
-      <label>E-mail Google <span style="font-weight:400;color:#94a3b8">(opcional — para login com Google)</span></label>
+      <label>E-mail Google <span style="font-weight:400;color:#94a3b8">(opcional — coloque aqui o Gmail para permitir login com Google)</span></label>
       <input type="email" id="f-email" placeholder="Ex: joao@gmail.com" autocapitalize="none">
     </div>
     <div class="field">
@@ -378,6 +378,10 @@
     const googleEmail = document.getElementById('f-email').value.trim().toLowerCase();
 
     if (!name || !username) { showModalErr('Preencha nome e usuário.'); return; }
+    if (username.includes('@') || username.includes(' ')) {
+      showModalErr('O campo "Usuário (login)" não pode ter @ nem espaços — não é o e-mail. Use algo como "joao.silva" e coloque o Gmail no campo "E-mail Google" abaixo.');
+      return;
+    }
     if (!editingUid && password.length < 6) { showModalErr('Senha deve ter pelo menos 6 caracteres.'); return; }
     if (editingUid && password && password.length < 6) { showModalErr('Nova senha deve ter pelo menos 6 caracteres.'); return; }
 

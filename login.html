@@ -191,7 +191,8 @@
   // ── Verifica resultado de redirect do Google ──
   auth.getRedirectResult().then(async result => {
     if (result && result.user) {
-      await handleGoogleUser(result.user);
+      const cred = firebase.auth.GoogleAuthProvider.credentialFromResult(result);
+      await handleGoogleUser(result.user, cred && cred.accessToken);
     }
   }).catch(e => {
     if (e.code !== 'auth/no-auth-event') showError('Erro no login com Google: ' + e.message);
@@ -214,15 +215,18 @@
     try {
       const provider = new firebase.auth.GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
+      // Permissão extra para anexar laudos/arquivos no Google Drive (pasta NR13/ano/mês)
+      provider.addScope('https://www.googleapis.com/auth/drive.file');
       const result = await auth.signInWithPopup(provider);
-      await handleGoogleUser(result.user);
+      const cred = firebase.auth.GoogleAuthProvider.credentialFromResult(result);
+      await handleGoogleUser(result.user, cred && cred.accessToken);
     } catch(e) {
       if (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request') return;
       showError('Erro ao entrar com Google. Tente novamente.');
     }
   }
 
-  async function handleGoogleUser(firebaseUser) {
+  async function handleGoogleUser(firebaseUser, driveAccessToken) {
     try {
       // Busca perfil pelo e-mail Google no Firestore
       const snap = await db.collection('users')
@@ -246,7 +250,9 @@
         username:  profile.username || firebaseUser.displayName,
         name:      profile.name || firebaseUser.displayName,
         role:      profile.role,
-        loginTime: Date.now()
+        loginTime: Date.now(),
+        driveAccessToken: driveAccessToken || null,
+        driveTokenTime: driveAccessToken ? Date.now() : null
       }));
 
       window.location.replace('menu.html');

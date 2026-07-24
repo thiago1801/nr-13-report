@@ -190,8 +190,13 @@
     <h3>📎 Adicionar laudo anterior</h3>
     <div class="modal-err" id="upload-err"></div>
 
+    <div class="field" id="up-drive-status" style="font-size:11px;color:#64748b;margin-bottom:12px"></div>
     <div class="field">
-      <label>Link ou local do arquivo (opcional)</label>
+      <label>Arquivo (PDF ou Word) <span style="font-weight:400;color:#94a3b8">— salvo no Google Drive em NR13/ano/mês</span></label>
+      <input type="file" id="up-file" accept=".pdf,.doc,.docx">
+    </div>
+    <div class="field">
+      <label>Link ou local do arquivo (opcional, se não anexar aqui)</label>
       <input type="text" id="up-link" placeholder="Ex: link do Google Drive ou pasta no computador">
     </div>
     <div class="field">
@@ -266,8 +271,107 @@
     return isNaN(d) ? null : d;
   }
 
+  // ── Google Drive: token vem do login com Google (escopo drive.file) ──
+  function getDriveToken() {
+    // Token de OAuth do Google dura ~1h; se tiver mais de 50min, considera expirado
+    if (!session.driveAccessToken || !session.driveTokenTime) return null;
+    if (Date.now() - session.driveTokenTime > 50 * 60 * 1000) return null;
+    return session.driveAccessToken;
+  }
+
+  async function reconectarGoogleDrive() {
+    try {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      provider.addScope('https://www.googleapis.com/auth/drive.file');
+      const result = await firebase.auth().signInWithPopup(provider);
+      const cred = firebase.auth.GoogleAuthProvider.credentialFromResult(result);
+      if (cred && cred.accessToken) {
+        session.driveAccessToken = cred.accessToken;
+        session.driveTokenTime = Date.now();
+        localStorage.setItem('alc_session', JSON.stringify(session));
+      }
+      updateDriveStatus();
+    } catch(e) {
+      showUploadErr('Não foi possível conectar ao Google Drive: ' + e.message);
+    }
+  }
+
+  function updateDriveStatus() {
+    const el = document.getElementById('up-drive-status');
+    if (getDriveToken()) {
+      el.innerHTML = '✅ Conectado ao Google Drive.';
+    } else {
+      el.innerHTML = '⚠️ Sem conexão com o Google Drive (necessário para anexar o arquivo). ' +
+        '<a href="#" onclick="reconectarGoogleDrive();return false;" style="color:#212F62;font-weight:700">Conectar agora</a> ' +
+        '— ou preencha só o campo de link/local abaixo.';
+    }
+  }
+
+  // Busca (ou cria) uma subpasta pelo nome dentro de um parent no Drive
+  async function driveFindOrCreateFolder(name, parentId, token) {
+    const q = encodeURIComponent(`name='${name.replace(/'/g,"\\'")}' and mimeType='application/vnd.google-apps.folder' and trashed=false and '${parentId}' in parents`);
+    const listRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`, {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    const listData = await listRes.json();
+    if (listData.files && listData.files.length > 0) return listData.files[0].id;
+
+    const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, mimeType: 'application/vnd.google-apps.folder', parents: [parentId] })
+    });
+    const createData = await createRes.json();
+    if (!createRes.ok) throw new Error(createData.error?.message || 'Erro ao criar pasta no Drive.');
+    return createData.id;
+  }
+
+  // Sobe o arquivo para dentro da pasta NR13/ano/mês e retorna o link de visualização
+  async function uploadFileToDrive(file, dataRealizacao, token) {
+    const d = parseBRDate(dataRealizacao) || new Date();
+    const ano = String(d.getFullYear());
+    const mes = String(d.getMonth() + 1).padStart(2, '0') + ' - ' +
+      ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][d.getMonth()];
+
+    const rootId = await driveFindOrCreateFolder('NR13', 'root', token);
+    const anoId = await driveFindOrCreateFolder(ano, rootId, token);
+    const mesId = await driveFindOrCreateFolder(mes, anoId, token);
+
+    // Cria o arquivo (metadados) já dentro da pasta certa
+    const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: file.name, parents: [mesId] })
+    });
+    const createData = await createRes.json();
+    if (!createRes.ok) throw new Error(createData.error?.message || 'Erro ao criar arquivo no Drive.');
+
+    // Sobe o conteúdo do arquivo
+    const uploadRes = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${createData.id}?uploadType=media`, {
+      method: 'PATCH',
+      headers: { Authorization: 'Bearer ' + token, 'Content-Type': file.type || 'application/octet-stream' },
+      body: file
+    });
+    if (!uploadRes.ok) { const errData = await uploadRes.json(); throw new Error(errData.error?.message || 'Erro ao enviar conteúdo do arquivo.'); }
+
+    // Permite abrir o link mesmo por quem não é dono do arquivo no Drive
+    await fetch(`https://www.googleapis.com/drive/v3/files/${createData.id}/permissions`, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: 'reader', type: 'anyone' })
+    });
+
+    const metaRes = await fetch(`https://www.googleapis.com/drive/v3/files/${createData.id}?fields=webViewLink`, {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    const metaData = await metaRes.json();
+    return metaData.webViewLink;
+  }
+
   // ── Modal: Adicionar laudo anterior ──
   function openUploadModal() {
+    document.getElementById('up-file').value = '';
     document.getElementById('up-link').value = '';
     document.getElementById('up-cliente').value = '';
     document.getElementById('up-tag').value = '';
@@ -276,6 +380,7 @@
     document.getElementById('up-data-vencimento').value = '';
     document.getElementById('up-tipo-venc').value = 'data_prox_insp_ext';
     document.getElementById('upload-err').style.display = 'none';
+    updateDriveStatus();
     document.getElementById('upload-overlay').classList.add('open');
   }
   function closeUploadModal() {
@@ -288,6 +393,7 @@
   }
 
   async function saveUpload() {
+    const file = document.getElementById('up-file').files[0];
     const link = document.getElementById('up-link').value.trim();
     const cliente = document.getElementById('up-cliente').value.trim();
     const tag = document.getElementById('up-tag').value.trim();
@@ -302,13 +408,23 @@
     if (!cliente) { showUploadErr('Preencha o cliente.'); return; }
     if (dataRealizacao && !parseBRDate(dataRealizacao)) { showUploadErr('Data de realização inválida. Use dd/mm/aaaa.'); return; }
     if (dataVencimento && !parseBRDate(dataVencimento)) { showUploadErr('Data de vencimento inválida. Use dd/mm/aaaa.'); return; }
+    if (file) {
+      const ext = (file.name.split('.').pop() || '').toLowerCase();
+      if (!['pdf','doc','docx'].includes(ext)) { showUploadErr('Só é permitido PDF ou Word (.doc/.docx).'); return; }
+      if (!getDriveToken()) { showUploadErr('Conecte o Google Drive (link acima) antes de anexar o arquivo, ou deixe o campo de arquivo vazio e use o link/local manual.'); return; }
+    }
 
     btn.disabled = true;
-    btn.textContent = 'Salvando...';
+    btn.textContent = file ? 'Enviando ao Drive...' : 'Salvando...';
 
     try {
       const authUser = await authReady;
       if (!authUser) throw new Error('Sessão do Firebase expirada. Saia e faça login novamente.');
+
+      let arquivoLink = link || '';
+      if (file) {
+        arquivoLink = await uploadFileToDrive(file, dataRealizacao, getDriveToken());
+      }
 
       const formDataObj = {
         cliente_nome: cliente,
@@ -330,7 +446,7 @@
         usuario: session.name || session.username,
         uid: session.uid,
         formData: formDataObj,
-        arquivoLink: link || '',
+        arquivoLink: arquivoLink || '',
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       });
