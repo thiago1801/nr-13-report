@@ -282,7 +282,9 @@
   async function reconectarGoogleDrive() {
     try {
       const provider = new firebase.auth.GoogleAuthProvider();
-      provider.setCustomParameters({ prompt: 'select_account' });
+      // 'consent' força o Google a mostrar a tela de permissão do Drive de novo
+      // (com 'select_account' o Google às vezes reaproveita um login antigo sem a permissão nova)
+      provider.setCustomParameters({ prompt: 'consent' });
       provider.addScope('https://www.googleapis.com/auth/drive.file');
       const result = await firebase.auth().signInWithPopup(provider);
       const cred = firebase.auth.GoogleAuthProvider.credentialFromResult(result);
@@ -290,8 +292,10 @@
         session.driveAccessToken = cred.accessToken;
         session.driveTokenTime = Date.now();
         localStorage.setItem('alc_session', JSON.stringify(session));
+        updateDriveStatus();
+      } else {
+        showUploadErr('O Google não retornou a permissão do Drive. Tente novamente e, na tela do Google, confirme a permissão para "Ver, editar e criar seus próprios arquivos no Google Drive".');
       }
-      updateDriveStatus();
     } catch(e) {
       showUploadErr('Não foi possível conectar ao Google Drive: ' + e.message);
     }
