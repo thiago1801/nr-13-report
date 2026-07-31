@@ -105,8 +105,17 @@
 
 <script>
 // ============================================================
+// AUTH — garante que o Firebase Auth restaure a sessão antes de ler/gravar no Firestore
+// ============================================================
+var _authReadyResolve;
+var authReady = new Promise(function(resolve){ _authReadyResolve = resolve; });
+firebase.auth().onAuthStateChanged(function(user){ _authReadyResolve(user); });
+
+// ============================================================
 // STATE
 // ============================================================
+var currentRecordId = null;
+var isFinalized = false;
 var fd = {
   // Capa
   cliente_nome:'',cliente_end:'',cliente_cidade:'',cliente_cnpj:'',
@@ -505,7 +514,7 @@ function renderGerar() {
     + '<div class="gerar-btns">'
     + '<button class="btn-primary" onclick="gerarWord()">&#128196; Gerar Word (.doc)</button>'
     + '<button class="btn-success" onclick="gerarPDF()">&#128247; Gerar PDF</button>'
-    + '<button class="btn-secondary" onclick="salvarRegistro()">&#128190; Salvar Registro</button>'
+    + '<button class="btn-secondary" onclick="salvarRegistro()">&#128190; Salvar Rascunho</button>'
     + '</div>'
     + '<p id="gerar-status" style="margin-top:10px;font-size:13px;color:var(--muted)"></p>'
     + '</div>';
@@ -923,6 +932,7 @@ function gerarWord() {
   document.body.appendChild(a);
   a.click();
   setTimeout(function(){ URL.revokeObjectURL(url); document.body.removeChild(a); }, 2000);
+  saveRecord(isFinalized ? 'finalizado' : 'rascunho');
 }
 
 function gerarPDF() {
@@ -933,46 +943,120 @@ function gerarPDF() {
   win.document.write(html);
   win.document.close();
   setTimeout(function(){ win.focus(); win.print(); }, 800);
+  saveRecord(isFinalized ? 'finalizado' : 'rascunho');
 }
 
 // ============================================================
-// FIREBASE SAVE
+// FIREBASE SAVE — rascunho/finalizado, com retomada por ?id=
 // ============================================================
-function salvarRegistro() {
+function salvarEstadoLocal(id) {
+  // Guarda fotos/anexos no navegador (mesmo padrão dos outros módulos) para
+  // continuar de onde parou neste mesmo aparelho.
+  try {
+    var fullState = {
+      fd: JSON.parse(JSON.stringify(fd)),
+      fotoEquip: fotoEquip,
+      artPages: JSON.parse(JSON.stringify(artPages)),
+      comprovPages: JSON.parse(JSON.stringify(comprovPages)),
+      endPhotos: JSON.parse(JSON.stringify(endPhotos)),
+      calibManPages: JSON.parse(JSON.stringify(calibManPages)),
+      calibPsvPages: JSON.parse(JSON.stringify(calibPsvPages))
+    };
+    localStorage.setItem('alc_draft_' + id, JSON.stringify(fullState));
+  } catch(e) { /* localStorage cheio — segue só com o texto salvo no Firestore */ }
+}
+
+async function saveRecord(status) {
   var statusEl = document.getElementById('gerar-status');
   if (statusEl) statusEl.textContent = 'Salvando...';
   var session = null;
   try { session = JSON.parse(localStorage.getItem('alc_session')||'null'); } catch(e){}
-  var doc = {
-    modulo: 'Prontuario',
-    data: new Date().toISOString(),
-    uid: session ? session.uid : 'desconhecido',
-    usuario: session ? (session.name||session.username||'') : '',
-    cliente: fd.cliente_nome,
-    relatorio: fd.num_relatorio,
-    vaso_serie: fd.vaso_serie,
-    vp_numero: fd.vp_numero,
-    data_inicio: fd.data_inicio,
-    data_fim: fd.data_fim,
-    formData: fd
-  };
-  if (typeof firebase !== 'undefined' && firebase.firestore) {
-    firebase.firestore().collection('registros').add(doc)
-      .then(function(ref) {
-        if (statusEl) statusEl.textContent = 'Salvo com sucesso! ID: ' + ref.id;
-      })
-      .catch(function(e) {
-        if (statusEl) statusEl.textContent = 'Erro ao salvar: ' + e.message;
-      });
-  } else {
-    if (statusEl) statusEl.textContent = 'Firebase nao disponivel.';
+  if (!session) { if (statusEl) statusEl.textContent = 'Sessão expirada. Faça login novamente.'; return; }
+
+  try {
+    var authUser = await authReady;
+    if (!authUser) throw new Error('Sessão do Firebase expirada. Saia e faça login novamente.');
+
+    var db = firebase.firestore();
+    var docData = {
+      status: status,
+      modulo: 'Prontuario',
+      cliente: fd.cliente_nome || '',
+      vp: fd.vp_numero || '',
+      relatorio: fd.num_relatorio || '',
+      data_inspecao: fd.data_inicio || '',
+      data_realizacao: fd.data_fim || '',
+      local: fd.cli_local || '',
+      vaso_serie: fd.vaso_serie || '',
+      usuario: session.name || session.username || '',
+      uid: session.uid,
+      formData: JSON.parse(JSON.stringify(fd)),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    var docRef;
+    if (currentRecordId) {
+      docRef = db.collection('registros').doc(currentRecordId);
+      await docRef.update(docData);
+    } else {
+      docData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+      docRef = await db.collection('registros').add(docData);
+      currentRecordId = docRef.id;
+      history.replaceState({}, '', '?id=' + currentRecordId);
+    }
+
+    salvarEstadoLocal(currentRecordId);
+    isFinalized = status === 'finalizado';
+    if (statusEl) statusEl.textContent = status === 'finalizado'
+      ? 'Salvo (finalizado)! Acesse em "Últimos Registros" a qualquer momento.'
+      : 'Rascunho salvo! Acesse em "Últimos Registros" para continuar depois.';
+  } catch(e) {
+    if (statusEl) statusEl.textContent = 'Erro ao salvar: ' + e.message;
+  }
+}
+
+// Botão "Salvar Rascunho" na aba Gerar
+function salvarRegistro() { saveRecord('rascunho'); }
+
+// Carrega um registro existente (retomada via ?id=)
+async function loadRecord(id) {
+  try {
+    var authUser = await authReady;
+    if (!authUser) return;
+    var db = firebase.firestore();
+    var doc = await db.collection('registros').doc(id).get();
+    if (!doc.exists) return;
+    var data = doc.data();
+    currentRecordId = id;
+    isFinalized = data.status === 'finalizado';
+    if (data.formData) Object.assign(fd, data.formData);
+
+    // Restaura fotos/anexos se salvos neste mesmo aparelho
+    try {
+      var saved = JSON.parse(localStorage.getItem('alc_draft_' + id) || 'null');
+      if (saved) {
+        if (saved.fd) Object.assign(fd, saved.fd);
+        fotoEquip = saved.fotoEquip || null;
+        artPages = saved.artPages || [];
+        comprovPages = saved.comprovPages || [];
+        endPhotos = saved.endPhotos || [];
+        calibManPages = saved.calibManPages || [];
+        calibPsvPages = saved.calibPsvPages || [];
+      }
+    } catch(e) {}
+
+    showTab(currentTab);
+  } catch(e) {
+    console.error('Erro ao carregar registro:', e);
   }
 }
 
 // ============================================================
 // INIT
 // ============================================================
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+  var urlId = new URLSearchParams(window.location.search).get('id');
+  if (urlId) { await loadRecord(urlId); }
   showTab('capa');
 });
 </script>

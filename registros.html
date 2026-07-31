@@ -162,6 +162,8 @@
   <select class="filter-select" id="filter-modulo" onchange="applyFilters()">
     <option value="">Todos os módulos</option>
     <option value="NR-13">Inspeção NR-13</option>
+    <option value="Calibracao">Calibração</option>
+    <option value="Prontuario">Prontuário</option>
     <option value="Legado">Laudo anterior (upload)</option>
   </select>
   <select class="filter-select" id="filter-status" onchange="applyFilters()">
@@ -476,7 +478,8 @@
   // ── Ícone por módulo ──
   function moduleIcon(m) {
     if (m === 'NR-13') return '🔧';
-    if (m === 'Calibração') return '⚙️';
+    if (m === 'Calibracao') return '⚙️';
+    if (m === 'Prontuario') return '🗄️';
     if (m === 'Legado') return '📎';
     return '📋';
   }
@@ -510,12 +513,12 @@
 
       // Ações conforme status
       let actions = '';
-      if (r.modulo === 'NR-13') {
-        if (!isFinal) {
-          actions += `<a class="btn-rec btn-continuar" href="Laudo-VP-NR13.html?id=${r.id}">✏️ Continuar editando</a>`;
-        } else {
-          actions += `<a class="btn-rec btn-continuar" href="Laudo-VP-NR13.html?id=${r.id}">📄 Abrir PDF / QR</a>`;
-        }
+      const modulePages = { 'NR-13': 'Laudo-VP-NR13.html', 'Calibracao': 'calibracao.html', 'Prontuario': 'prontuario.html' };
+      const modulePage = modulePages[r.modulo];
+      if (modulePage) {
+        actions += !isFinal
+          ? `<a class="btn-rec btn-continuar" href="${modulePage}?id=${r.id}">✏️ Continuar editando</a>`
+          : `<a class="btn-rec btn-continuar" href="${modulePage}?id=${r.id}">📄 Abrir</a>`;
       }
       if (r.modulo === 'Legado' && r.arquivoLink) {
         const isUrl = /^https?:\/\//i.test(r.arquivoLink);
