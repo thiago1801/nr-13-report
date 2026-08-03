@@ -353,6 +353,24 @@ function renderGerar(){
   +'</div>'
   +rows.map(function(r){return '<div class="gen-row"><span style="color:var(--muted)">'+r[0]+'</span><span style="font-weight:600">'+r[1]+'</span></div>';}).join('')
   +'</div>'
+  +'<div style="background:#12151f;border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px">'
+  +'<div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:12px">Resultado da Inspecao</div>'
+  +'<div style="display:flex;gap:8px;margin-bottom:12px">'
+  +'<button '+(isFinalized?'disabled':'')+' onclick="formData.aprovacao_inspecao=\'aprovado\';renderContent()" style="flex:1;padding:9px;border:1.5px solid '+(formData.aprovacao_inspecao==='aprovado'?'#16a34a':'var(--border)')+';background:'+(formData.aprovacao_inspecao==='aprovado'?'#052e16':'#0a0d16')+';color:'+(formData.aprovacao_inspecao==='aprovado'?'#4ade80':'var(--muted)')+';border-radius:8px;cursor:pointer;font-size:12.5px;font-weight:700">Aprovacao</button>'
+  +'<button '+(isFinalized?'disabled':'')+' onclick="formData.aprovacao_inspecao=\'reprovado\';renderContent()" style="flex:1;padding:9px;border:1.5px solid '+(formData.aprovacao_inspecao==='reprovado'?'#dc2626':'var(--border)')+';background:'+(formData.aprovacao_inspecao==='reprovado'?'#2e0505':'#0a0d16')+';color:'+(formData.aprovacao_inspecao==='reprovado'?'#f87171':'var(--muted)')+';border-radius:8px;cursor:pointer;font-size:12.5px;font-weight:700">Reprovacao</button>'
+  +'</div>'
+  +'<div class="field-mb full">'
+  +'<label class="field-lbl">Justificativa (opcional - max. 10.000 caracteres)</label>'
+  +'<textarea class="field-inp" rows="5" maxlength="10000" '+(isFinalized?'disabled':'')+' placeholder="Descreva, se desejar, o motivo da aprovacao e/ou reprovacao da inspecao..." oninput="formData.justificativa_aprovacao=this.value;document.getElementById(\'just-count\').textContent=this.value.length" style="resize:vertical;font-family:inherit">'+(formData.justificativa_aprovacao||'')+'</textarea>'
+  +'<div style="text-align:right;font-size:10px;color:var(--muted);margin-top:3px"><span id="just-count">'+((formData.justificativa_aprovacao||'').length)+'</span>/10000</div>'
+  +'</div>'
+  +(formData.aprovacao_inspecao==='reprovado'
+    ?'<div class="field-mb full">'
+    +'<label class="field-lbl">Assinatura do Cliente</label>'
+    +'<input class="field-inp" type="text" '+(isFinalized?'disabled':'')+' value="'+(formData.assinatura_cliente!==undefined?formData.assinatura_cliente:(formData.cliente_nome||''))+'" placeholder="Nome do cliente (conforme Capa)" onchange="formData.assinatura_cliente=this.value"/>'
+    +'<div style="font-size:10px;color:var(--muted);margin-top:3px">Pre-preenchido com o nome do cliente informado na aba Capa. Pode ser ajustado se necessario.</div>'
+    +'</div>' : '')
+  +'</div>'
   +'<div id="save-msg" style="margin-bottom:10px;font-size:12px;min-height:18px"></div>'
   +(isFinalized
     ?'<div style="background:#052e16;border:1.5px solid #16a34a;border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#4ade80;font-weight:700">Laudo finalizado - somente leitura. Para editar, reabra como rascunho em Registros.</div>'
@@ -656,6 +674,10 @@ async function doGenerate(tipo,format){
 }
 
 function confirmFinalize(){
+  if(formData.aprovacao_inspecao==='reprovado' && !(formData.assinatura_cliente||'').trim()){
+    alert('Para reprovar a inspecao, preencha o campo "Assinatura do Cliente".');
+    return;
+  }
   if(!confirm('Finalizar o laudo? Ele ficara somente leitura.'))return;
   saveRecord('finalizado');
   isFinalized=true;

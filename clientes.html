@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>ALC — Clientes</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#212F62">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { min-height: 100vh; background: #f1f5f9; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; color: #1e293b; }
+
+    .topbar { background: #212F62; color: #fff; padding: 0 20px; height: 56px;
+      display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+    .topbar-left { display: flex; align-items: center; gap: 10px; }
+    .back-btn { background: rgba(255,255,255,0.12); border: none; color: #fff; padding: 6px 12px;
+      border-radius: 7px; font-size: 13px; cursor: pointer; text-decoration: none; display: inline-block; font-family: inherit; }
+    .back-btn:hover { background: rgba(255,255,255,0.2); }
+    .topbar h1 { font-size: 16px; font-weight: 700; }
+
+    .main { max-width: 780px; margin: 0 auto; padding: 24px 20px 32px; }
+    .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .section-head h2 { font-size: 17px; font-weight: 700; color: #212F62; }
+    .btn-add { background: #C81F25; color: #fff; border: none; border-radius: 8px;
+      padding: 9px 18px; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .btn-add:hover { background: #a81820; }
+
+    .search-inp { width: 100%; padding: 9px 13px; border: 1.5px solid #e2e8f0; border-radius: 9px;
+      font-size: 13px; font-family: inherit; outline: none; background: #fff; margin-bottom: 14px; }
+    .search-inp:focus { border-color: #212F62; }
+
+    .item-list { display: flex; flex-direction: column; gap: 10px; }
+    .item-card { background: #fff; border-radius: 12px; padding: 14px 18px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06); border: 1.5px solid #e2e8f0; }
+    .item-card.inactive { opacity: 0.55; }
+    .item-top { display: flex; align-items: center; gap: 14px; }
+    .item-icon { width: 44px; height: 44px; border-radius: 12px; background: #eff6ff;
+      display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+    .item-info { flex: 1; min-width: 0; }
+    .item-title { font-size: 14px; font-weight: 700; color: #1e293b; }
+    .item-meta { font-size: 12px; color: #64748b; margin-top: 2px; line-height: 1.6; }
+    .item-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .btn-sm { border: 1.5px solid #e2e8f0; background: #fff; color: #374151; border-radius: 7px;
+      padding: 5px 10px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .btn-sm:hover { border-color: #212F62; color: #212F62; }
+    .btn-sm.danger:hover { border-color: #dc2626; color: #dc2626; }
+
+    .equip-section { margin-top: 12px; padding-top: 12px; border-top: 1px solid #f1f5f9; }
+    .equip-title { font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase;
+      letter-spacing: .4px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .equip-row { display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 6px 0; border-bottom: 1px solid #f8fafc; font-size: 12px; }
+    .equip-row:last-child { border-bottom: none; }
+    .equip-info { color: #374151; }
+    .equip-info b { color: #1e293b; }
+    .equip-empty { font-size: 12px; color: #94a3b8; padding: 4px 0; }
+    .btn-xs { border: none; background: none; color: #dc2626; cursor: pointer; font-size: 12px; font-weight: 700; }
+    .add-equip-row { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+    .add-equip-row input { flex: 1; min-width: 90px; padding: 7px 9px; border: 1.5px solid #e2e8f0;
+      border-radius: 7px; font-size: 12px; font-family: inherit; outline: none; }
+    .add-equip-row input:focus { border-color: #212F62; }
+    .btn-equip-add { background: #212F62; color: #fff; border: none; border-radius: 7px;
+      padding: 7px 12px; font-size: 12px; font-weight: 700; cursor: pointer; }
+
+    .empty-state { text-align: center; padding: 60px 20px; color: #94a3b8; }
+
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300;
+      display: none; align-items: center; justify-content: center; padding: 16px; }
+    .overlay.open { display: flex; }
+    .modal { background: #fff; border-radius: 14px; padding: 24px; width: 100%; max-width: 460px;
+      max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
+    .modal h3 { font-size: 16px; font-weight: 800; color: #212F62; margin-bottom: 16px; }
+    .field { margin-bottom: 12px; }
+    .field label { display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 5px; }
+    .field input { width: 100%; padding: 10px 12px; border: 1.5px solid #e2e8f0;
+      border-radius: 8px; font-size: 13px; outline: none; font-family: inherit; }
+    .field input:focus { border-color: #212F62; }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .modal-err { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; border-radius: 8px;
+      padding: 9px 12px; font-size: 13px; margin-bottom: 12px; display: none; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 6px; }
+    .btn-save { flex: 1; background: #212F62; color: #fff; border: none; border-radius: 8px;
+      padding: 12px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; }
+    .btn-cancel { flex: 1; background: #f1f5f9; color: #374151; border: none; border-radius: 8px;
+      padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; }
+
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+      background: #1e293b; color: #fff; padding: 10px 20px; border-radius: 10px; font-size: 13px;
+      font-weight: 600; transition: transform 0.3s; z-index: 999; }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.success { background: #16a34a; }
+    .toast.error { background: #dc2626; }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <a class="back-btn" href="menu.html">← Menu</a>
+    <h1>🏢 Clientes</h1>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="main">
+  <div class="section-head">
+    <h2>Clientes cadastrados</h2>
+    <button class="btn-add" onclick="openModal()">+ Novo cliente</button>
+  </div>
+  <input class="search-inp" id="search" type="text" placeholder="🔍 Buscar cliente..." oninput="renderList()">
+  <div class="item-list" id="item-list">
+    <div class="empty-state" id="empty-state">Carregando clientes...</div>
+  </div>
+</div>
+
+<!-- Modal cliente -->
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3 id="modal-title">Novo Cliente</h3>
+    <div class="modal-err" id="modal-err"></div>
+
+    <div class="field">
+      <label>Nome do Cliente</label>
+      <input type="text" id="f-nome" placeholder="Razão social">
+    </div>
+    <div class="field">
+      <label>Endereço (Rua, Número, Bairro)</label>
+      <input type="text" id="f-end" placeholder="Ex: Rua X, 100, Bairro Y">
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Cidade / Estado / CEP</label>
+        <input type="text" id="f-cidade" placeholder="Ex: Contagem/MG">
+      </div>
+      <div class="field">
+        <label>CNPJ</label>
+        <input type="text" id="f-cnpj" placeholder="00.000.000/0000-00">
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-save" id="btn-save" onclick="saveItem()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+
+<script>
+  const session = (function(){
+    try {
+      const s = JSON.parse(localStorage.getItem('alc_session') || 'null');
+      if (s && s.uid && (Date.now() - s.loginTime) < 8 * 60 * 60 * 1000) return s;
+    } catch(e) {}
+    return null;
+  })();
+  if (!session) { window.location.replace('login.html'); }
+
+  const db = firebase.firestore();
+  let _authReadyResolve;
+  const authReady = new Promise(resolve => { _authReadyResolve = resolve; });
+  firebase.auth().onAuthStateChanged(user => { _authReadyResolve(user); });
+
+  let editingId = null;
+  let allItems = [];
+
+  function showToast(msg, type='') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show ' + type;
+    setTimeout(() => { t.className = 'toast'; }, 3000);
+  }
+
+  async function loadItems() {
+    try {
+      const authUser = await authReady;
+      if (!authUser) {
+        document.getElementById('empty-state').textContent = 'Sessão do Firebase expirada. Saia e faça login novamente.';
+        return;
+      }
+      const snap = await db.collection('clientes').orderBy('nome').get();
+      allItems = snap.docs.map(d => ({ id: d.id, equipamentos: [], ...d.data() }));
+      renderList();
+    } catch(e) {
+      document.getElementById('empty-state').textContent = 'Erro ao carregar: ' + e.message;
+    }
+  }
+
+  function renderList() {
+    const search = document.getElementById('search').value.toLowerCase();
+    const list = document.getElementById('item-list');
+    const empty = document.getElementById('empty-state');
+    const filtered = allItems.filter(i => !search || (i.nome||'').toLowerCase().includes(search));
+
+    if (filtered.length === 0) {
+      list.innerHTML = '';
+      empty.style.display = 'block';
+      empty.textContent = allItems.length === 0 ? 'Nenhum cliente cadastrado.' : 'Nenhum cliente encontrado.';
+      return;
+    }
+    empty.style.display = 'none';
+
+    list.innerHTML = filtered.map(i => {
+      const inactive = i.ativo === false;
+      const equipRows = (i.equipamentos||[]).map((eq, idx) => `
+        <div class="equip-row">
+          <div class="equip-info"><b>${eq.tag||'—'}</b> · ${eq.modelo||'—'} · ${eq.local||'—'}</div>
+          <button class="btn-xs" onclick="removeEquip('${i.id}', ${idx})">remover</button>
+        </div>`).join('') || '<div class="equip-empty">Nenhum equipamento cadastrado.</div>';
+
+      return `
+      <div class="item-card ${inactive?'inactive':''}">
+        <div class="item-top">
+          <div class="item-icon">🏢</div>
+          <div class="item-info">
+            <div class="item-title">${i.nome||'—'} ${inactive?'<em style="font-weight:400;font-size:11px;color:#94a3b8">(desativado)</em>':''}</div>
+            <div class="item-meta">${i.cidade||'—'} · ${i.cnpj||'sem CNPJ'} · ${(i.equipamentos||[]).length} equipamento(s)</div>
+          </div>
+          <div class="item-actions">
+            <button class="btn-sm" onclick='editItem(${JSON.stringify({id:i.id,nome:i.nome,endereco:i.endereco,cidade:i.cidade,cnpj:i.cnpj}).replace(/'/g,"&apos;")})'>✏ Editar</button>
+            <button class="btn-sm danger" onclick="toggleActive('${i.id}', ${!!inactive})">${inactive?'✓ Ativar':'✗ Desativar'}</button>
+          </div>
+        </div>
+        <div class="equip-section">
+          <div class="equip-title">Equipamentos</div>
+          ${equipRows}
+          <div class="add-equip-row">
+            <input type="text" id="eq-tag-${i.id}" placeholder="Tag (ex: VP-01)">
+            <input type="text" id="eq-modelo-${i.id}" placeholder="Modelo/Identificação">
+            <input type="text" id="eq-local-${i.id}" placeholder="Local">
+            <button class="btn-equip-add" onclick="addEquip('${i.id}')">+ Adicionar</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  async function addEquip(clienteId) {
+    const tag = document.getElementById('eq-tag-'+clienteId).value.trim();
+    const modelo = document.getElementById('eq-modelo-'+clienteId).value.trim();
+    const local = document.getElementById('eq-local-'+clienteId).value.trim();
+    if (!tag && !modelo) { showToast('Preencha ao menos a tag ou o modelo do equipamento.', 'error'); return; }
+    const item = allItems.find(i => i.id === clienteId);
+    if (!item) return;
+    const novosEquip = [...(item.equipamentos||[]), { tag, modelo, local }];
+    try {
+      await authReady;
+      await db.collection('clientes').doc(clienteId).update({ equipamentos: novosEquip });
+      item.equipamentos = novosEquip;
+      renderList();
+      showToast('Equipamento adicionado!', 'success');
+    } catch(e) {
+      showToast('Erro ao adicionar equipamento: ' + e.message, 'error');
+    }
+  }
+
+  async function removeEquip(clienteId, idx) {
+    if (!confirm('Remover este equipamento?')) return;
+    const item = allItems.find(i => i.id === clienteId);
+    if (!item) return;
+    const novosEquip = (item.equipamentos||[]).filter((_, i) => i !== idx);
+    try {
+      await authReady;
+      await db.collection('clientes').doc(clienteId).update({ equipamentos: novosEquip });
+      item.equipamentos = novosEquip;
+      renderList();
+    } catch(e) {
+      showToast('Erro ao remover equipamento: ' + e.message, 'error');
+    }
+  }
+
+  function openModal(item=null) {
+    editingId = item ? item.id : null;
+    document.getElementById('modal-title').textContent = item ? 'Editar Cliente' : 'Novo Cliente';
+    document.getElementById('f-nome').value = item ? (item.nome||'') : '';
+    document.getElementById('f-end').value = item ? (item.endereco||'') : '';
+    document.getElementById('f-cidade').value = item ? (item.cidade||'') : '';
+    document.getElementById('f-cnpj').value = item ? (item.cnpj||'') : '';
+    document.getElementById('modal-err').style.display = 'none';
+    document.getElementById('overlay').classList.add('open');
+  }
+  function editItem(i) { openModal(i); }
+  function closeModal() { document.getElementById('overlay').classList.remove('open'); }
+  function showModalErr(msg) {
+    const el = document.getElementById('modal-err');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  async function saveItem() {
+    const nome = document.getElementById('f-nome').value.trim();
+    const btn = document.getElementById('btn-save');
+    if (!nome) { showModalErr('Preencha o nome do cliente.'); return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
+    try {
+      const authUser = await authReady;
+      if (!authUser) throw new Error('Sessão do Firebase expirada. Saia e faça login novamente.');
+
+      const data = {
+        nome,
+        endereco: document.getElementById('f-end').value.trim(),
+        cidade: document.getElementById('f-cidade').value.trim(),
+        cnpj: document.getElementById('f-cnpj').value.trim(),
+      };
+
+      if (editingId) {
+        await db.collection('clientes').doc(editingId).update(data);
+        showToast('Cliente atualizado!', 'success');
+      } else {
+        data.ativo = true;
+        data.equipamentos = [];
+        data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+        data.uid = session.uid;
+        await db.collection('clientes').add(data);
+        showToast('Cliente criado!', 'success');
+      }
+      closeModal();
+      loadItems();
+    } catch(e) {
+      showModalErr('Erro ao salvar: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Salvar';
+    }
+  }
+
+  async function toggleActive(id, makeActive) {
+    if (!confirm(makeActive ? 'Ativar este cliente?' : 'Desativar este cliente?')) return;
+    try {
+      await authReady;
+      await db.collection('clientes').doc(id).update({ ativo: makeActive });
+      showToast(makeActive ? 'Cliente ativado.' : 'Cliente desativado.', 'success');
+      loadItems();
+    } catch(e) {
+      showToast('Erro: ' + e.message, 'error');
+    }
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && document.getElementById('overlay').classList.contains('open')) saveItem();
+    if (e.key === 'Escape') closeModal();
+  });
+
+  loadItems();
+</script>
+</body>
+</html>

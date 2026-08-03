@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>ALC — Instrumentos</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#212F62">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { min-height: 100vh; background: #f1f5f9; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; color: #1e293b; }
+
+    .topbar { background: #212F62; color: #fff; padding: 0 20px; height: 56px;
+      display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+    .topbar-left { display: flex; align-items: center; gap: 10px; }
+    .back-btn { background: rgba(255,255,255,0.12); border: none; color: #fff; padding: 6px 12px;
+      border-radius: 7px; font-size: 13px; cursor: pointer; text-decoration: none; display: inline-block; font-family: inherit; }
+    .back-btn:hover { background: rgba(255,255,255,0.2); }
+    .topbar h1 { font-size: 16px; font-weight: 700; }
+
+    .main { max-width: 780px; margin: 0 auto; padding: 24px 20px 32px; }
+    .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+    .section-head h2 { font-size: 17px; font-weight: 700; color: #212F62; }
+    .btn-add { background: #C81F25; color: #fff; border: none; border-radius: 8px;
+      padding: 9px 18px; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .btn-add:hover { background: #a81820; }
+
+    .filter-select { padding: 8px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px;
+      font-size: 13px; font-family: inherit; background: #fff; color: #374151; outline: none; }
+
+    .item-list { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+    .item-card { background: #fff; border-radius: 12px; padding: 14px 18px; display: flex;
+      align-items: center; gap: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); border: 1.5px solid #e2e8f0; }
+    .item-card.inactive { opacity: 0.55; }
+    .item-icon { width: 44px; height: 44px; border-radius: 12px; background: #eff6ff;
+      display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+    .item-info { flex: 1; min-width: 0; }
+    .item-title { font-size: 14px; font-weight: 700; color: #1e293b; }
+    .item-meta { font-size: 12px; color: #64748b; margin-top: 2px; line-height: 1.6; }
+    .tipo-pill { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 6px;
+      text-transform: uppercase; letter-spacing: .3px; }
+    .tipo-ultrassom { background: #eff6ff; color: #1d4ed8; }
+    .tipo-manometro { background: #fff7ed; color: #c2410c; }
+    .tipo-outro { background: #f0fdf4; color: #16a34a; }
+
+    .item-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .btn-sm { border: 1.5px solid #e2e8f0; background: #fff; color: #374151; border-radius: 7px;
+      padding: 5px 10px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; }
+    .btn-sm:hover { border-color: #212F62; color: #212F62; }
+    .btn-sm.danger:hover { border-color: #dc2626; color: #dc2626; }
+
+    .empty-state { text-align: center; padding: 60px 20px; color: #94a3b8; }
+    .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300;
+      display: none; align-items: center; justify-content: center; padding: 16px; }
+    .overlay.open { display: flex; }
+    .modal { background: #fff; border-radius: 14px; padding: 24px; width: 100%; max-width: 460px;
+      max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
+    .modal h3 { font-size: 16px; font-weight: 800; color: #212F62; margin-bottom: 16px; }
+    .field { margin-bottom: 12px; }
+    .field label { display: block; font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 5px; }
+    .field input, .field select { width: 100%; padding: 10px 12px; border: 1.5px solid #e2e8f0;
+      border-radius: 8px; font-size: 13px; outline: none; font-family: inherit; }
+    .field input:focus, .field select:focus { border-color: #212F62; }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .modal-err { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; border-radius: 8px;
+      padding: 9px 12px; font-size: 13px; margin-bottom: 12px; display: none; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 6px; }
+    .btn-save { flex: 1; background: #212F62; color: #fff; border: none; border-radius: 8px;
+      padding: 12px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; }
+    .btn-cancel { flex: 1; background: #f1f5f9; color: #374151; border: none; border-radius: 8px;
+      padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; }
+
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+      background: #1e293b; color: #fff; padding: 10px 20px; border-radius: 10px; font-size: 13px;
+      font-weight: 600; transition: transform 0.3s; z-index: 999; }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.success { background: #16a34a; }
+    .toast.error { background: #dc2626; }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <a class="back-btn" href="menu.html">← Menu</a>
+    <h1>🔬 Instrumentos</h1>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="main">
+  <div class="section-head">
+    <h2>Instrumentos cadastrados</h2>
+    <button class="btn-add" onclick="openModal()">+ Novo instrumento</button>
+  </div>
+  <select class="filter-select" id="filter-tipo" onchange="renderList()" style="margin-bottom:6px">
+    <option value="">Todos os tipos</option>
+    <option value="ultrassom">Ultrassom</option>
+    <option value="manometro">Manômetro</option>
+    <option value="outro">Outro</option>
+  </select>
+  <div class="item-list" id="item-list">
+    <div class="empty-state" id="empty-state">Carregando instrumentos...</div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3 id="modal-title">Novo Instrumento</h3>
+    <div class="modal-err" id="modal-err"></div>
+
+    <div class="field">
+      <label>Tipo</label>
+      <select id="f-tipo">
+        <option value="ultrassom">Ultrassom (medidor de espessura)</option>
+        <option value="manometro">Manômetro</option>
+        <option value="outro">Outro</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Apelido / Identificação rápida</label>
+      <input type="text" id="f-nome" placeholder="Ex: USM Go — Oficina">
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Modelo</label>
+        <input type="text" id="f-modelo" placeholder="Ex: USM Go">
+      </div>
+      <div class="field">
+        <label>Fabricante</label>
+        <input type="text" id="f-fabricante" placeholder="Ex: GE">
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Nº de Série</label>
+        <input type="text" id="f-serie" placeholder="Ex: 123456">
+      </div>
+      <div class="field">
+        <label>Precisão</label>
+        <input type="text" id="f-precisao" placeholder="Ex: ±0,01 mm">
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Faixa de Medição</label>
+        <input type="text" id="f-faixa" placeholder="Ex: 0,6 a 300 mm">
+      </div>
+      <div class="field">
+        <label>Sensor</label>
+        <input type="text" id="f-sensor" placeholder="Ex: 5MHz duplo cristal">
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Potência</label>
+        <input type="text" id="f-potencia" placeholder="Opcional">
+      </div>
+      <div class="field">
+        <label>Corrente</label>
+        <input type="text" id="f-corrente" placeholder="Opcional">
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-save" id="btn-save" onclick="saveItem()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+
+<script>
+  const session = (function(){
+    try {
+      const s = JSON.parse(localStorage.getItem('alc_session') || 'null');
+      if (s && s.uid && (Date.now() - s.loginTime) < 8 * 60 * 60 * 1000) return s;
+    } catch(e) {}
+    return null;
+  })();
+  if (!session) { window.location.replace('login.html'); }
+
+  const db = firebase.firestore();
+  let _authReadyResolve;
+  const authReady = new Promise(resolve => { _authReadyResolve = resolve; });
+  firebase.auth().onAuthStateChanged(user => { _authReadyResolve(user); });
+
+  let editingId = null;
+  let allItems = [];
+
+  function showToast(msg, type='') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show ' + type;
+    setTimeout(() => { t.className = 'toast'; }, 3000);
+  }
+
+  const tipoIcon = { ultrassom: '📡', manometro: '⏲️', outro: '🔧' };
+  const tipoLabel = { ultrassom: 'Ultrassom', manometro: 'Manômetro', outro: 'Outro' };
+
+  async function loadItems() {
+    try {
+      const authUser = await authReady;
+      if (!authUser) {
+        document.getElementById('empty-state').textContent = 'Sessão do Firebase expirada. Saia e faça login novamente.';
+        return;
+      }
+      const snap = await db.collection('instrumentos').orderBy('nome').get();
+      allItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderList();
+    } catch(e) {
+      document.getElementById('empty-state').textContent = 'Erro ao carregar: ' + e.message;
+    }
+  }
+
+  function renderList() {
+    const tipo = document.getElementById('filter-tipo').value;
+    const list = document.getElementById('item-list');
+    const empty = document.getElementById('empty-state');
+    const filtered = allItems.filter(i => !tipo || i.tipo === tipo);
+
+    if (filtered.length === 0) {
+      list.innerHTML = '';
+      empty.style.display = 'block';
+      empty.textContent = allItems.length === 0 ? 'Nenhum instrumento cadastrado.' : 'Nenhum instrumento para este filtro.';
+      return;
+    }
+    empty.style.display = 'none';
+
+    list.innerHTML = filtered.map(i => {
+      const inactive = i.ativo === false;
+      return `
+      <div class="item-card ${inactive?'inactive':''}">
+        <div class="item-icon">${tipoIcon[i.tipo] || '🔧'}</div>
+        <div class="item-info">
+          <div class="item-title">${i.nome || i.modelo || '—'} ${inactive?'<em style="font-weight:400;font-size:11px;color:#94a3b8">(desativado)</em>':''}</div>
+          <div class="item-meta">
+            <span class="tipo-pill tipo-${i.tipo}">${tipoLabel[i.tipo]||'Outro'}</span><br>
+            Modelo: ${i.modelo||'—'} · Fabricante: ${i.fabricante||'—'}<br>
+            Série: ${i.serie||'—'} · Precisão: ${i.precisao||'—'} · Faixa: ${i.faixa||'—'}
+          </div>
+        </div>
+        <div class="item-actions">
+          <button class="btn-sm" onclick='editItem(${JSON.stringify(i).replace(/'/g,"&apos;")})'>✏ Editar</button>
+          <button class="btn-sm danger" onclick="toggleActive('${i.id}', ${!!inactive})">${inactive?'✓ Ativar':'✗ Desativar'}</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  function openModal(item=null) {
+    editingId = item ? item.id : null;
+    document.getElementById('modal-title').textContent = item ? 'Editar Instrumento' : 'Novo Instrumento';
+    document.getElementById('f-tipo').value = item ? (item.tipo||'ultrassom') : 'ultrassom';
+    document.getElementById('f-nome').value = item ? (item.nome||'') : '';
+    document.getElementById('f-modelo').value = item ? (item.modelo||'') : '';
+    document.getElementById('f-fabricante').value = item ? (item.fabricante||'') : '';
+    document.getElementById('f-serie').value = item ? (item.serie||'') : '';
+    document.getElementById('f-precisao').value = item ? (item.precisao||'') : '';
+    document.getElementById('f-faixa').value = item ? (item.faixa||'') : '';
+    document.getElementById('f-sensor').value = item ? (item.sensor||'') : '';
+    document.getElementById('f-potencia').value = item ? (item.potencia||'') : '';
+    document.getElementById('f-corrente').value = item ? (item.corrente||'') : '';
+    document.getElementById('modal-err').style.display = 'none';
+    document.getElementById('overlay').classList.add('open');
+  }
+  function editItem(i) { openModal(i); }
+  function closeModal() { document.getElementById('overlay').classList.remove('open'); }
+  function showModalErr(msg) {
+    const el = document.getElementById('modal-err');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  async function saveItem() {
+    const tipo = document.getElementById('f-tipo').value;
+    const nome = document.getElementById('f-nome').value.trim();
+    const modelo = document.getElementById('f-modelo').value.trim();
+    const btn = document.getElementById('btn-save');
+
+    if (!nome && !modelo) { showModalErr('Preencha ao menos o apelido ou o modelo.'); return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Salvando...';
+    try {
+      const authUser = await authReady;
+      if (!authUser) throw new Error('Sessão do Firebase expirada. Saia e faça login novamente.');
+
+      const data = {
+        tipo,
+        nome: nome || modelo,
+        modelo,
+        fabricante: document.getElementById('f-fabricante').value.trim(),
+        serie: document.getElementById('f-serie').value.trim(),
+        precisao: document.getElementById('f-precisao').value.trim(),
+        faixa: document.getElementById('f-faixa').value.trim(),
+        sensor: document.getElementById('f-sensor').value.trim(),
+        potencia: document.getElementById('f-potencia').value.trim(),
+        corrente: document.getElementById('f-corrente').value.trim(),
+      };
+
+      if (editingId) {
+        await db.collection('instrumentos').doc(editingId).update(data);
+        showToast('Instrumento atualizado!', 'success');
+      } else {
+        data.ativo = true;
+        data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+        data.uid = session.uid;
+        await db.collection('instrumentos').add(data);
+        showToast('Instrumento criado!', 'success');
+      }
+      closeModal();
+      loadItems();
+    } catch(e) {
+      showModalErr('Erro ao salvar: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Salvar';
+    }
+  }
+
+  async function toggleActive(id, makeActive) {
+    if (!confirm(makeActive ? 'Ativar este instrumento?' : 'Desativar este instrumento?')) return;
+    try {
+      await authReady;
+      await db.collection('instrumentos').doc(id).update({ ativo: makeActive });
+      showToast(makeActive ? 'Instrumento ativado.' : 'Instrumento desativado.', 'success');
+      loadItems();
+    } catch(e) {
+      showToast('Erro: ' + e.message, 'error');
+    }
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && document.getElementById('overlay').classList.contains('open')) saveItem();
+    if (e.key === 'Escape') closeModal();
+  });
+
+  loadItems();
+</script>
+</body>
+</html>
