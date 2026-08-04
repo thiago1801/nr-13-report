@@ -927,6 +927,43 @@ function syncEspMinCalc(eCostado,eTampo){
   }
 }
 
+// ── Tipos de aço memorizados (localStorage — sem necessidade de módulo/Firestore) ──
+const ACOS_CUSTOM_KEY='alc_acos_customizados';
+function getAcosCustomizados(){
+  try{ return JSON.parse(localStorage.getItem(ACOS_CUSTOM_KEY)||'[]'); }catch(e){ return []; }
+}
+function salvarAcoCustomizado(nome,valor){
+  nome=(nome||'').trim(); valor=(valor||'').trim();
+  if(!nome||!valor) return false;
+  const lista=getAcosCustomizados();
+  const jaExiste=lista.some(a=>a.code.toLowerCase()===nome.toLowerCase());
+  if(!jaExiste){
+    lista.push({code:nome,s:valor});
+    localStorage.setItem(ACOS_CUSTOM_KEY,JSON.stringify(lista));
+  }
+  return true;
+}
+// Tabela completa de tipos de aço conforme ASME/ASTM + memorizados pelo usuário
+function getSteelTypesCompletos(){
+  const base=[
+    {code:'— Selecione o tipo de aço —',          s:'',    desc:''},
+    {code:'SA 285 Grade C – ASTM 285 Grau C',      s:'108', desc:'108 MPa'},
+    {code:'SA 516 Grade 60 – ASTM 516 Grau 60',    s:'118', desc:'118 MPa'},
+    {code:'SA 516 Grade 70 – ASTM 516 Grau 70',    s:'138', desc:'138 MPa'},
+    {code:'SA A 36 – ASTM A 36',                   s:'114', desc:'114 MPa'},
+    {code:'SA 414 Grade A',                         s:'88.9',desc:'88,9 MPa'},
+    {code:'SA 414 Grade B',                         s:'98.6',desc:'98,6 MPa'},
+    {code:'SA 414 Grade C',                         s:'108', desc:'108 MPa'},
+    {code:'SA 414 Grade D',                         s:'118', desc:'118 MPa'},
+    {code:'SA 414 Grade E',                         s:'128', desc:'128 MPa'},
+    {code:'SA 414 Grade F',                         s:'138', desc:'138 MPa'},
+    {code:'SA 414M Grade G – ASTM A414M Gr.G',     s:'148', desc:'148 MPa'},
+    {code:'SA A 178 Grade A – ASTM A 178 Grau A',  s:'78.6',desc:'78,6 MPa'},
+  ];
+  const custom=getAcosCustomizados().map(a=>({code:a.code+' (memorizado)',s:a.s,desc:a.s+' MPa'}));
+  return [...base,...custom,{code:'Outro (inserir manualmente)',s:'manual',desc:''}];
+}
+
 function renderMemorial(){
   // Valores calculados
   const P=parseFloat((formData.mem_pressao_mpa||'0').replace(',','.'))||0;
@@ -941,22 +978,8 @@ function renderMemorial(){
   const eTampo=isFinite((P*R)/(St*Et-0.1*P)+Ct)&&St*Et-0.1*P>0?(P*R)/(St*Et-0.1*P)+Ct:0;
   syncEspMinCalc(eCostado,eTampo);
 
-  // Tabela completa de tipos de aço conforme ASME/ASTM
-  const steelTypes=[
-    {code:'— Selecione o tipo de aço —',          s:'',    desc:''},
-    {code:'SA 285 Grade C – ASTM 285 Grau C',      s:'108', desc:'108 MPa'},
-    {code:'SA 516 Grade 60 – ASTM 516 Grau 60',    s:'118', desc:'118 MPa'},
-    {code:'SA 516 Grade 70 – ASTM 516 Grau 70',    s:'138', desc:'138 MPa'},
-    {code:'SA A 36 – ASTM A 36',                   s:'114', desc:'114 MPa'},
-    {code:'SA 414 Grade A',                         s:'88.9',desc:'88,9 MPa'},
-    {code:'SA 414 Grade B',                         s:'98.6',desc:'98,6 MPa'},
-    {code:'SA 414 Grade C',                         s:'108', desc:'108 MPa'},
-    {code:'SA 414 Grade D',                         s:'118', desc:'118 MPa'},
-    {code:'SA 414 Grade E',                         s:'128', desc:'128 MPa'},
-    {code:'SA 414 Grade F',                         s:'138', desc:'138 MPa'},
-    {code:'SA A 178 Grade A – ASTM A 178 Grau A',  s:'78.6',desc:'78,6 MPa'},
-    {code:'Outro (inserir manualmente)',             s:'manual', desc:''},
-  ];
+  // Tabela completa de tipos de aço conforme ASME/ASTM + memorizados pelo usuário
+  const steelTypes=getSteelTypesCompletos();
   const isManualC = formData.mem_tensao_manual_c==='1';
   const isManualT = formData.mem_tensao_manual_t==='1';
 
@@ -971,14 +994,25 @@ function renderMemorial(){
         </option>`).join('')}
       </select>
       ${isManual?`
-        <div class="field-mb full" style="margin-bottom:0">
+        <div class="field-mb full" style="margin-bottom:8px">
+          <label class="field-lbl">Nome / Especificação do Tipo de Aço</label>
+          <input class="field-inp" type="text" id="novo-aco-nome-${key}"
+            value="${formData[tensaoKey+'_nome_manual']||''}"
+            placeholder="ex: SA-414M Gr. G"
+            oninput="formData['${tensaoKey}_nome_manual']=this.value"/>
+        </div>
+        <div class="field-mb full" style="margin-bottom:8px">
           <label class="field-lbl">S — Tensão Admissível (MPa) — inserir manualmente</label>
-          <input class="field-inp" type="text" inputmode="decimal"
+          <input class="field-inp" type="text" inputmode="decimal" id="novo-aco-valor-${key}"
             value="${formData[tensaoKey]||''}"
             placeholder="ex: 120,5"
             oninput="formData['${tensaoKey}']=this.value;updateMemorialResults()"
             style="font-weight:700;color:var(--accent)"/>
-        </div>`:`
+        </div>
+        <button onclick="memorizarNovoAco('${key}','${tensaoKey}')"
+          style="width:100%;padding:8px;background:#166534;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:0">
+          ✅ OK — Memorizar este tipo de aço junto com os outros
+        </button>`:`
         <div style="background:#0a1628;border:1px solid #1e40af;border-radius:7px;padding:8px 12px;display:flex;align-items:center;justify-content:space-between">
           <span style="font-size:11px;color:var(--label)">S selecionado:</span>
           <span style="font-size:20px;font-weight:900;color:var(--accent)">${formData[tensaoKey]||'—'} MPa</span>
@@ -1145,8 +1179,9 @@ function renderMemorial(){
         <label class="field-lbl">Costado e Tampos (conforme tipo de aço S selecionado)</label>
         <input class="field-inp" value="${(()=>{
           const s1=formData.mem_tensao||'';const s2=formData.mem_tensao_tampo||'';
-          const steelMap={'108':'ASME SA-285 Gr.C / SA-414 Gr.C','118':'ASME SA-516 Gr.60 / SA-414 Gr.D','138':'ASME SA-516 Gr.70 / SA-414 Gr.F','114':'ASME SA-36','88.9':'ASME SA-414 Gr.A','98.6':'ASME SA-414 Gr.B','128':'ASME SA-414 Gr.E','78.6':'ASME SA-178 Gr.A'};
-          return steelMap[s1]||steelMap[s2]||'ASME AS-36M / ASME AS-414M Gr.E';
+          const steelMap={'108':'ASME SA-285 Gr.C / SA-414 Gr.C','118':'ASME SA-516 Gr.60 / SA-414 Gr.D','138':'ASME SA-516 Gr.70 / SA-414 Gr.F','114':'ASME SA-36','88.9':'ASME SA-414 Gr.A','98.6':'ASME SA-414 Gr.B','128':'ASME SA-414 Gr.E','148':'ASME SA-414M Gr.G','78.6':'ASME SA-178 Gr.A'};
+          const acoCustom1=getAcosCustomizados().find(a=>a.s===s1||a.s===s2);
+          return steelMap[s1]||steelMap[s2]||(acoCustom1&&acoCustom1.code)||'ASME AS-36M / ASME AS-414M Gr.E';
         })()||''}" readonly style="background:#0a0d14;color:var(--success);font-weight:600;font-size:12px"/>
         <div style="font-size:10px;color:var(--muted);margin-top:3px">Preenchido automaticamente conforme tipo de aço selecionado na fórmula</div>
       </div>
@@ -1711,6 +1746,21 @@ function selectSteel(val,tensaoKey,manualFlagKey){
     formData[manualFlagKey]='0';
     if(val!=='') formData[tensaoKey]=val;
   }
+  renderContent();
+}
+
+// Memoriza um novo tipo de aço digitado manualmente (localStorage, junto com os demais tipos)
+function memorizarNovoAco(key,tensaoKey){
+  const nome=(formData[tensaoKey+'_nome_manual']||'').trim();
+  const valor=(formData[tensaoKey]||'').trim();
+  if(!nome||!valor){
+    alert('Preencha o nome do tipo de aço e a tensão admissível (S) antes de memorizar.');
+    return;
+  }
+  salvarAcoCustomizado(nome,valor);
+  // Mantém o valor selecionado, mas sai do modo manual — agora ele aparece na lista
+  const manualFlagKey=key==='costado'?'mem_tensao_manual_c':'mem_tensao_manual_t';
+  formData[manualFlagKey]='0';
   renderContent();
 }
 
@@ -2715,8 +2765,9 @@ function buildHTML(qrDataUrl){
   <h2 id="sec10">10. CERTIFICADO DE MEDIÇÃO DE ESPESSURA</h2>
   ${(()=>{
     const tL=getTampoLabels();
-    const steelMap={'108':'ASME SA-285 Gr.C / SA-414 Gr.C','118':'ASME SA-516 Gr.60 / SA-414 Gr.D','138':'ASME SA-516 Gr.70 / SA-414 Gr.F','114':'ASME SA-36','88.9':'ASME SA-414 Gr.A','98.6':'ASME SA-414 Gr.B','128':'ASME SA-414 Gr.E','78.6':'ASME SA-178 Gr.A'};
-    const matCostado=steelMap[d.mem_tensao]||steelMap[d.mem_tensao_tampo]||'ASME AS-36M / ASME AS-414M Gr.E';
+    const steelMap={'108':'ASME SA-285 Gr.C / SA-414 Gr.C','118':'ASME SA-516 Gr.60 / SA-414 Gr.D','138':'ASME SA-516 Gr.70 / SA-414 Gr.F','114':'ASME SA-36','88.9':'ASME SA-414 Gr.A','98.6':'ASME SA-414 Gr.B','128':'ASME SA-414 Gr.E','148':'ASME SA-414M Gr.G','78.6':'ASME SA-178 Gr.A'};
+    const acoCustom2=getAcosCustomizados().find(a=>a.s===d.mem_tensao||a.s===d.mem_tensao_tampo);
+    const matCostado=steelMap[d.mem_tensao]||steelMap[d.mem_tensao_tampo]||(acoCustom2&&acoCustom2.code)||'ASME AS-36M / ASME AS-414M Gr.E';
     const eC=parseFloat((d.esp_min_calc_costado||'').replace(',','.'))||0;
     const eTD=parseFloat((d.esp_min_calc_tampo_dir||'').replace(',','.'))||0;
     const eTEx=parseFloat((d.esp_min_calc_tampo_esq||'').replace(',','.'))||0;
