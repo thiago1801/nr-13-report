@@ -116,6 +116,7 @@ firebase.auth().onAuthStateChanged(function(user){ _authReadyResolve(user); });
 // ============================================================
 var currentRecordId = null;
 var isFinalized = false;
+var clientesCatalogo = [];
 var fd = {
   // Capa
   cliente_nome:'',cliente_end:'',cliente_cidade:'',cliente_cnpj:'',
@@ -230,9 +231,55 @@ function card(title, body) {
 // ============================================================
 // CAPA
 // ============================================================
+function renderClienteSelectorProntuario() {
+  var clienteId = fd._cliente_selecionado_id || '';
+  var cliente = clientesCatalogo.filter(function(c){ return c.id === clienteId; })[0];
+  var opts = clientesCatalogo.map(function(c){
+    return '<option value="' + c.id + '"' + (clienteId === c.id ? ' selected' : '') + '>' + c.nome + '</option>';
+  }).join('');
+  var equipOpts = '';
+  if (cliente && cliente.equipamentos && cliente.equipamentos.length) {
+    equipOpts = '<div class="field-row single"><div class="field"><label>Equipamento deste cliente</label>'
+      + '<select onchange="selectEquipamentoProntuario(this.value)"><option value="">— Selecionar equipamento —</option>'
+      + cliente.equipamentos.map(function(eq,i){
+          return '<option value="' + i + '">' + (eq.tag||'—') + ' · ' + (eq.modelo||'—') + ' · ' + (eq.local||'—') + '</option>';
+        }).join('')
+      + '</select></div></div>';
+  } else if (cliente) {
+    equipOpts = '<p style="font-size:11px;color:var(--muted);margin:4px 0 0">Este cliente ainda não tem equipamentos cadastrados. <a href="clientes.html" target="_blank">Cadastrar em Clientes →</a></p>';
+  }
+  return '<div style="background:#eff6ff;border:1px solid #93c5fd;border-radius:10px;padding:12px;margin-bottom:12px">'
+    + '<div style="font-size:11px;font-weight:700;color:#1d4ed8;text-transform:uppercase;margin-bottom:8px">Cliente Cadastrado (opcional)</div>'
+    + '<select onchange="selectClienteProntuario(this.value)"><option value="">— Digitar manualmente —</option>' + opts + '</select>'
+    + (clientesCatalogo.length===0?'<p style="font-size:11px;color:var(--muted);margin:6px 0 0">Nenhum cliente cadastrado ainda. <a href="clientes.html" target="_blank">Cadastrar em Clientes →</a></p>':'')
+    + equipOpts
+    + '</div>';
+}
+function selectClienteProntuario(id) {
+  fd._cliente_selecionado_id = id;
+  var c = clientesCatalogo.filter(function(x){ return x.id === id; })[0];
+  if (c) {
+    fd.cliente_nome = c.nome || '';
+    fd.cliente_end = c.endereco || '';
+    fd.cliente_cidade = c.cidade || '';
+    fd.cliente_cnpj = c.cnpj || '';
+  }
+  renderCapa();
+}
+function selectEquipamentoProntuario(idx) {
+  var c = clientesCatalogo.filter(function(x){ return x.id === fd._cliente_selecionado_id; })[0];
+  if (!c || !c.equipamentos || !c.equipamentos[idx]) return;
+  var eq = c.equipamentos[idx];
+  fd.cli_tag = eq.tag || fd.cli_tag || '';
+  fd.vaso_modelo = eq.modelo || fd.vaso_modelo || '';
+  fd.cli_local = eq.local || fd.cli_local || '';
+  renderCapa();
+}
+
 function renderCapa() {
   var c = document.getElementById('content');
   c.innerHTML = '<div class="section-title">Capa do Relatório</div>'
+    + renderClienteSelectorProntuario()
     + card('Dados do Cliente',
         row([fld('cliente_nome','Nome do Cliente',{ph:'Razão social'}), fld('cliente_cnpj','CNPJ',{ph:'00.000.000/0000-00'})])
         + row([fld('cliente_end','Endereço',{ph:'Rua, número, bairro'}), fld('cliente_cidade','Cidade/UF',{ph:'Belo Horizonte - MG'})])
@@ -1004,6 +1051,8 @@ async function saveRecord(status) {
     var authUser = await authReady;
     if (!authUser) throw new Error('Sessão do Firebase expirada. Saia e faça login novamente.');
 
+    await garantirClienteCadastrado();
+
     var db = firebase.firestore();
     var docData = {
       status: status,
@@ -1079,12 +1128,69 @@ async function loadRecord(id) {
 }
 
 // ============================================================
+// CATÁLOGO DE CLIENTES
+// ============================================================
+async function carregarClientes() {
+  try {
+    var authUser = await authReady;
+    if (!authUser) return;
+    var db = firebase.firestore();
+    var snap = await db.collection('clientes').get();
+    clientesCatalogo = snap.docs.map(function(d){
+      var data = d.data();
+      data.equipamentos = data.equipamentos || [];
+      data.id = d.id;
+      return data;
+    }).filter(function(c){ return c.ativo !== false; });
+    if (currentTab === 'capa') renderCapa();
+  } catch(e) { console.error('Erro ao carregar clientes:', e); }
+}
+
+// Garante que o cliente informado no laudo esteja cadastrado no módulo Clientes.
+// Se não existir (por nome), cria. Se existir mas faltar este equipamento, adiciona.
+async function garantirClienteCadastrado() {
+  try {
+    var nome = (fd.cliente_nome || '').trim();
+    if (!nome) return;
+    var authUser = await authReady;
+    if (!authUser) return;
+    var db = firebase.firestore();
+    var nomeNorm = nome.toLowerCase();
+    var existente = clientesCatalogo.filter(function(c){ return (c.nome||'').trim().toLowerCase() === nomeNorm; })[0];
+    var equipTag = (fd.cli_tag || '').trim();
+
+    if (!existente) {
+      var novoCliente = {
+        nome: nome,
+        endereco: fd.cliente_end || '',
+        cidade: fd.cliente_cidade || '',
+        cnpj: fd.cliente_cnpj || '',
+        ativo: true,
+        equipamentos: equipTag ? [{ tag: equipTag, modelo: fd.vaso_modelo || '', local: fd.cli_local || '' }] : [],
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      var ref = await db.collection('clientes').add(novoCliente);
+      novoCliente.id = ref.id;
+      clientesCatalogo.push(novoCliente);
+    } else if (equipTag) {
+      var jaTem = (existente.equipamentos||[]).some(function(eq){ return (eq.tag||'').trim().toLowerCase() === equipTag.toLowerCase(); });
+      if (!jaTem) {
+        var novosEquip = (existente.equipamentos||[]).concat([{ tag: equipTag, modelo: fd.vaso_modelo || '', local: fd.cli_local || '' }]);
+        await db.collection('clientes').doc(existente.id).update({ equipamentos: novosEquip });
+        existente.equipamentos = novosEquip;
+      }
+    }
+  } catch(e) { console.error('Erro ao sincronizar cliente no catálogo:', e); }
+}
+
+// ============================================================
 // INIT
 // ============================================================
 document.addEventListener('DOMContentLoaded', async function() {
   var urlId = new URLSearchParams(window.location.search).get('id');
   if (urlId) { await loadRecord(urlId); }
   showTab('capa');
+  carregarClientes();
 });
 </script>
 </body>

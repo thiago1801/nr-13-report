@@ -1224,8 +1224,19 @@ function renderDispositivos(){
 
   <div class="sec-title" style="margin-top:18px">📎 Certificados de Calibração (Anexos 15, 16 e 17)</div>
   <div class="sec-sub">Envie o certificado em PDF ou imagem (JPG/PNG) — o app detecta automaticamente as páginas, igual à ART.</div>
-  ${renderMultiPageUploader('manometro','📄 Anexo 15 — Certificado de Calibração do Manômetro')}
-  ${renderMultiPageUploader('valvula','📄 Anexo 16 — Certificado de Calibração da Válvula de Segurança')}
+
+  <label style="display:flex;align-items:center;gap:9px;background:#0c1a2e;border:1px solid #1e40af;border-radius:10px;padding:11px 14px;margin-bottom:10px;cursor:pointer;font-size:12.5px;color:#93c5fd;font-weight:700">
+    <input type="checkbox" ${formData.exibir_calib_manometro!=='0'?'checked':''} onchange="formData.exibir_calib_manometro=this.checked?'1':'0';renderContent()" style="width:16px;height:16px;cursor:pointer"/>
+    Exibir Certificado de Calibração do Manômetro no documento gerado
+  </label>
+  ${formData.exibir_calib_manometro!=='0'?renderMultiPageUploader('manometro','📄 Anexo 15 — Certificado de Calibração do Manômetro'):`<div style="font-size:11px;color:var(--muted);margin-bottom:14px">Certificado do manômetro oculto — não será incluído no documento gerado.</div>`}
+
+  <label style="display:flex;align-items:center;gap:9px;background:#0c1a2e;border:1px solid #1e40af;border-radius:10px;padding:11px 14px;margin-bottom:10px;cursor:pointer;font-size:12.5px;color:#93c5fd;font-weight:700">
+    <input type="checkbox" ${formData.exibir_calib_valvula!=='0'?'checked':''} onchange="formData.exibir_calib_valvula=this.checked?'1':'0';renderContent()" style="width:16px;height:16px;cursor:pointer"/>
+    Exibir Certificado de Calibração da Válvula de Segurança no documento gerado
+  </label>
+  ${formData.exibir_calib_valvula!=='0'?renderMultiPageUploader('valvula','📄 Anexo 16 — Certificado de Calibração da Válvula de Segurança'):`<div style="font-size:11px;color:var(--muted);margin-bottom:14px">Certificado da válvula oculto — não será incluído no documento gerado.</div>`}
+
   ${renderMultiPageUploader('instrumento','📄 Anexo 17 — Certificado de Calibração do Instrumento Utilizado (Ultrassom)')}`;
 }
 
@@ -2499,8 +2510,10 @@ function buildHTML(qrDataUrl){
   <!-- PG 2: SUMÁRIO -->
   ${(()=>{
     const artPgs=Math.max(artPages.length,1);
-    const manoPgs=Math.max(calibPages.manometro.length,1);
-    const valvPgs=Math.max(calibPages.valvula.length,1);
+    const exibirManometro=d.exibir_calib_manometro!=='0';
+    const exibirValvula=d.exibir_calib_valvula!=='0';
+    const manoPgs=exibirManometro?Math.max(calibPages.manometro.length,1):0;
+    const valvPgs=exibirValvula?Math.max(calibPages.valvula.length,1):0;
     const instPgs=Math.max(calibPages.instrumento.length,1);
     let p=3;
     const pg={
@@ -2528,11 +2541,11 @@ function buildHTML(qrDataUrl){
       ['8.','AÇÕES A SEREM EXECUTADAS','sec8'],['9.','MEMORIAIS DE CÁLCULOS','sec9'],
       ['10.','CERTIFICADO DE MEDIÇÃO DE ESPESSURA','sec10'],['11.','REGISTROS FOTOGRÁFICOS','sec11'],
       ['12.','RECOMENDAÇÕES','sec12'],['13.','NOTAS TÉCNICAS DO VASO DE PRESSÃO','sec13'],
-      ['14.','CONCLUSÃO','sec14'],['15.','ANEXO 1 – CERTIFICADO DE CALIBRAÇÃO DO MANÔMETRO','sec15'],
-      ['16.','ANEXO 2 – CERTIFICADO DE CALIBRAÇÃO VÁLVULA DE SEGURANÇA','sec16'],
+      ['14.','CONCLUSÃO','sec14'],['15.','ANEXO 1 – CERTIFICADO DE CALIBRAÇÃO DO MANÔMETRO','sec15',!exibirManometro],
+      ['16.','ANEXO 2 – CERTIFICADO DE CALIBRAÇÃO VÁLVULA DE SEGURANÇA','sec16',!exibirValvula],
       ['17.','ANEXO 3 – CERTIFICADO DE CALIBRAÇÃO DO INSTRUMENTO UTILIZADO','sec17'],
       ['18.','ANEXO 4 – COMPROVANTE DE PAGAMENTO A.R.T','sec18'],
-    ].map(([n,t,anchor])=>`<a class="toc-link" href="#${anchor}"><div class="toc-row"><span class="toc-num">${n}</span><span class="toc-title">${t}</span><span class="toc-dots"></span><span class="toc-pg">${pg[anchor]||''}</span></div></a>`).join('')}`;
+    ].filter(row=>!row[3]).map(([n,t,anchor])=>`<a class="toc-link" href="#${anchor}"><div class="toc-row"><span class="toc-num">${n}</span><span class="toc-title">${t}</span><span class="toc-dots"></span><span class="toc-pg">${pg[anchor]||''}</span></div></a>`).join('')}`;
   })()}
   ${pb}
 
@@ -3094,10 +3107,10 @@ function buildHTML(qrDataUrl){
         <h2 id="sec${numLabel}">${numLabel}. ${titulo}</h2>
         <p style="color:#888;font-style:italic;font-size:9pt">${placeholderTxt}</p>`;
     };
-    return `${anexoBlock('15','ANEXO 1 – CERTIFICADO DE CALIBRAÇÃO DO MANÔMETRO',calibPages.manometro,'[Inserir certificado de calibração do manômetro — PDF ou imagem na aba Dispositivos]')}
-    ${pb}
-    ${anexoBlock('16','ANEXO 2 – CERTIFICADO DE CALIBRAÇÃO VÁLVULA DE SEGURANÇA',calibPages.valvula,'[Inserir certificado de calibração da válvula de segurança — PDF ou imagem na aba Dispositivos]')}
-    ${pb}
+    const exibirManometro2=d.exibir_calib_manometro!=='0';
+    const exibirValvula2=d.exibir_calib_valvula!=='0';
+    return `${exibirManometro2?anexoBlock('15','ANEXO 1 – CERTIFICADO DE CALIBRAÇÃO DO MANÔMETRO',calibPages.manometro,'[Inserir certificado de calibração do manômetro — PDF ou imagem na aba Dispositivos]')+pb:''}
+    ${exibirValvula2?anexoBlock('16','ANEXO 2 – CERTIFICADO DE CALIBRAÇÃO VÁLVULA DE SEGURANÇA',calibPages.valvula,'[Inserir certificado de calibração da válvula de segurança — PDF ou imagem na aba Dispositivos]')+pb:''}
     ${anexoBlock('17','ANEXO 3 – CERTIFICADO DE CALIBRAÇÃO DO INSTRUMENTO UTILIZADO',calibPages.instrumento,'[Inserir certificado de calibração do instrumento de ultrassom — PDF ou imagem na aba Dispositivos]')}
     ${pb}
     ${anexoBlock('18','ANEXO 4 – COMPROVANTE DE PAGAMENTO A.R.T',extras.art_comprov?[{dataUrl:extras.art_comprov.dataUrl,pageNum:1}]:[],'[Inserir comprovante de pagamento da ART]')}`;
@@ -3183,6 +3196,43 @@ async function carregarCatalogos(){
 }
 carregarCatalogos();
 
+// Garante que o cliente informado na Capa esteja cadastrado no módulo Clientes.
+// Se não existir (por nome), cria. Se existir mas faltar este equipamento, adiciona.
+async function garantirClienteCadastrado(){
+  try{
+    const nome=(formData.cliente_nome||'').trim();
+    if(!nome) return;
+    const authUser=await authReady;
+    if(!authUser) return;
+    const db=firebase.firestore();
+    const nomeNorm=nome.toLowerCase();
+    const existente=clientesCatalogo.find(c=>(c.nome||'').trim().toLowerCase()===nomeNorm);
+    const equipTag=(formData.tag_vaso||'').trim();
+
+    if(!existente){
+      const novoCliente={
+        nome,
+        endereco: formData.cliente_end||'',
+        cidade: formData.cliente_cidade||'',
+        cnpj: formData.cliente_cnpj||'',
+        ativo: true,
+        equipamentos: equipTag?[{tag:equipTag,modelo:formData.modelo||'',local:formData.local||''}]:[],
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      };
+      const ref=await db.collection('clientes').add(novoCliente);
+      novoCliente.id=ref.id;
+      clientesCatalogo.push(novoCliente);
+    } else if(equipTag){
+      const jaTem=(existente.equipamentos||[]).some(eq=>(eq.tag||'').trim().toLowerCase()===equipTag.toLowerCase());
+      if(!jaTem){
+        const novosEquip=(existente.equipamentos||[]).concat([{tag:equipTag,modelo:formData.modelo||'',local:formData.local||''}]);
+        await db.collection('clientes').doc(existente.id).update({equipamentos:novosEquip});
+        existente.equipamentos=novosEquip;
+      }
+    }
+  }catch(e){ console.error('Erro ao sincronizar cliente no catálogo:',e); }
+}
+
 // ── Salvar registro (rascunho ou finalizado) ──
 async function saveRecord(status) {
   const btn = document.getElementById('btn-save-draft');
@@ -3197,6 +3247,7 @@ async function saveRecord(status) {
     if (!s) throw new Error('Sessão expirada');
     const authUser = await authReady;
     if (!authUser) throw new Error('Sessão do Firebase expirada. Saia e faça login novamente.');
+    await garantirClienteCadastrado();
     var db = firebase.firestore();
 
     // Dados textuais para Firestore (sem imagens)

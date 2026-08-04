@@ -113,6 +113,7 @@ let currentTab = 'capa';
 let currentRecordId = null;
 let isFinalized = false;
 let tipoDispositivo = 'ambos';
+let clientesCatalogo = [];
 
 let formData = {
   cliente_nome:'', cliente_end:'', cliente_cidade:'', cliente_cnpj:'',
@@ -189,9 +190,97 @@ function renderContent(){
   document.getElementById('content').innerHTML=(map[currentTab]||renderDados)();
 }
 
+function renderClienteSelectorCalibracao(){
+  var clienteId=formData._cliente_selecionado_id||'';
+  var cliente=clientesCatalogo.filter(function(c){return c.id===clienteId;})[0];
+  var opts=clientesCatalogo.map(function(c){
+    return '<option value="'+c.id+'"'+(clienteId===c.id?' selected':'')+'>'+c.nome+'</option>';
+  }).join('');
+  var equipOpts='';
+  if(cliente&&cliente.equipamentos&&cliente.equipamentos.length){
+    equipOpts='<div class="field-mb full"><label class="field-lbl">Equipamento deste cliente</label>'
+      +'<select class="field-inp" onchange="selectEquipamentoCalibracao(this.value)"><option value="">— Selecionar equipamento —</option>'
+      +cliente.equipamentos.map(function(eq,i){return '<option value="'+i+'">'+(eq.tag||'—')+' · '+(eq.modelo||'—')+' · '+(eq.local||'—')+'</option>';}).join('')
+      +'</select></div>';
+  } else if(cliente){
+    equipOpts='<div style="font-size:11px;color:var(--muted);margin-bottom:10px">Este cliente ainda nao tem equipamentos cadastrados. <a href="clientes.html" target="_blank" style="color:#60a5fa">Cadastrar em Clientes &rarr;</a></div>';
+  }
+  return '<div style="background:#0a1628;border:1px solid #1e40af;border-radius:10px;padding:12px;margin-bottom:12px">'
+    +'<div style="font-size:11px;font-weight:700;color:#93c5fd;text-transform:uppercase;margin-bottom:8px">Cliente Cadastrado (opcional)</div>'
+    +'<select class="field-inp" onchange="selectClienteCalibracao(this.value)"><option value="">— Digitar manualmente —</option>'+opts+'</select>'
+    +(clientesCatalogo.length===0?'<div style="font-size:11px;color:var(--muted);margin-top:6px">Nenhum cliente cadastrado ainda. <a href="clientes.html" target="_blank" style="color:#60a5fa">Cadastrar em Clientes &rarr;</a></div>':'')
+    +equipOpts
+    +'</div>';
+}
+function selectClienteCalibracao(id){
+  formData._cliente_selecionado_id=id;
+  var c=clientesCatalogo.filter(function(x){return x.id===id;})[0];
+  if(c){
+    formData.cliente_nome=c.nome||'';
+    formData.cliente_end=c.endereco||'';
+    formData.cliente_cidade=c.cidade||'';
+    formData.cliente_cnpj=c.cnpj||'';
+    formData.cliente=c.nome||'';
+  }
+  updateHeader();
+  renderContent();
+}
+function selectEquipamentoCalibracao(idx){
+  var c=clientesCatalogo.filter(function(x){return x.id===formData._cliente_selecionado_id;})[0];
+  if(!c||!c.equipamentos||!c.equipamentos[idx])return;
+  var eq=c.equipamentos[idx];
+  formData.tag=eq.tag||formData.tag||'';
+  formData.local=eq.local||formData.local||'';
+  renderContent();
+}
+async function carregarCatalogoClientes(){
+  try{
+    var authUser=await authReady;
+    if(!authUser)return;
+    var db=firebase.firestore();
+    var snap=await db.collection('clientes').get();
+    clientesCatalogo=snap.docs.map(function(d){var data=d.data();data.id=d.id;data.equipamentos=data.equipamentos||[];return data;}).filter(function(c){return c.ativo!==false;});
+    if(currentTab==='capa')renderContent();
+  }catch(e){console.error('Erro ao carregar clientes:',e);}
+}
+async function garantirClienteCadastrado(){
+  try{
+    var nome=(formData.cliente_nome||formData.cliente||'').trim();
+    if(!nome)return;
+    var authUser=await authReady;
+    if(!authUser)return;
+    var db=firebase.firestore();
+    var nomeNorm=nome.toLowerCase();
+    var existente=clientesCatalogo.filter(function(c){return (c.nome||'').trim().toLowerCase()===nomeNorm;})[0];
+    var equipTag=(formData.tag||'').trim();
+    if(!existente){
+      var novoCliente={
+        nome:nome,
+        endereco:formData.cliente_end||'',
+        cidade:formData.cliente_cidade||'',
+        cnpj:formData.cliente_cnpj||'',
+        ativo:true,
+        equipamentos:equipTag?[{tag:equipTag,modelo:'',local:formData.local||''}]:[],
+        createdAt:firebase.firestore.FieldValue.serverTimestamp(),
+      };
+      var ref=await db.collection('clientes').add(novoCliente);
+      novoCliente.id=ref.id;
+      clientesCatalogo.push(novoCliente);
+    } else if(equipTag){
+      var jaTem=(existente.equipamentos||[]).some(function(eq){return (eq.tag||'').trim().toLowerCase()===equipTag.toLowerCase();});
+      if(!jaTem){
+        var novosEquip=(existente.equipamentos||[]).concat([{tag:equipTag,modelo:'',local:formData.local||''}]);
+        await db.collection('clientes').doc(existente.id).update({equipamentos:novosEquip});
+        existente.equipamentos=novosEquip;
+      }
+    }
+  }catch(e){console.error('Erro ao sincronizar cliente no catalogo:',e);}
+}
+
 function renderCapa(){
   return '<div class="sec-title">Capa do Relatorio</div>'
   +'<div class="sec-sub">Dados basicos que identificam o relatorio na capa do laudo.</div>'
+  +renderClienteSelectorCalibracao()
   +'<div class="row2">'
   +fld('Nome do Cliente','cliente_nome')
   +fld('Endereco (Rua, Numero, Bairro)','cliente_end')
@@ -706,6 +795,7 @@ window.addEventListener('DOMContentLoaded',async function(){
       if(urlId){currentRecordId=urlId;await loadRecord(urlId);}
     }
   }catch(e){console.error(e);}
+  carregarCatalogoClientes();
 });
 
 async function saveRecord(status){
@@ -716,6 +806,7 @@ async function saveRecord(status){
     if(!s)throw new Error('Sessao expirada');
     var authUser=await authReady;
     if(!authUser)throw new Error('Sessao do Firebase expirada. Saia e faca login novamente.');
+    await garantirClienteCadastrado();
     var db=firebase.firestore();
     var data={
       status:status,modulo:'Calibracao',
