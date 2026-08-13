@@ -312,16 +312,23 @@ function extractFromRecord(rec){
 
   // Calibração e reconstituição de prontuário — continuam como estavam
   const slots=[
-    {field:'data_calib_manval',  label:'Calibração Manômetro',    type:'calib'},
-    {field:'data_prox_calib',    label:'Calibração',              type:'calib'},
-    {field:'data_prox_pront',    label:'Reconstituição Prontuário',type:'pront'},
+    {field:'data_calib_manval',              label:'Calibração Manômetro',    type:'calib'},
+    {field:['prox_calibracao','data_prox_calib'], label:'Próxima Calibração', type:'calib'},
+    {field:'data_prox_pront',                label:'Reconstituição Prontuário',type:'pront'},
   ];
   slots.forEach(sl=>{
-    const raw=f[sl.field];
+    const fields=Array.isArray(sl.field)?sl.field:[sl.field];
+    let raw='';
+    for(const fld of fields){ if(f[fld]){ raw=f[fld]; break; } }
     const d=parseBR(raw);
     if(d){
       const dl=daysLeft(d);
-      evts.push({...base,label:sl.label,type:sl.type,date:d,days:dl,cat:cat(dl)});
+      let label=sl.label;
+      if(rec.modulo==='Calibracao' && sl.label==='Próxima Calibração'){
+        const tipo=f.tipoDispositivo||f.tipo_dispositivo;
+        label='Próxima Calibração'+(tipo==='manometro'?' — Manômetro':tipo==='psv'?' — Válvula de Segurança':tipo==='ambos'?' — Manômetro + Válvula':'');
+      }
+      evts.push({...base,label,type:sl.type,date:d,days:dl,cat:cat(dl)});
     }
   });
   return evts;

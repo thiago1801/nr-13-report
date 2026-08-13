@@ -54,7 +54,21 @@ input,button,select,textarea{font-family:inherit;}
 .sp-preview{position:relative;border-radius:7px;overflow:hidden;margin-bottom:8px;}
 .sp-preview img{width:100%;max-height:180px;object-fit:cover;border-radius:7px;display:block;}
 .sp-del{position:absolute;top:5px;right:5px;background:rgba(0,0,0,.7);border:none;color:#fff;width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:13px;font-weight:700;}
+.sp-edit{position:absolute;top:5px;right:33px;background:rgba(0,0,0,.7);border:none;color:#fff;width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:12px;}
 .sp-empty{background:#0a0d14;border:1.5px dashed var(--border);border-radius:7px;height:80px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;margin-bottom:9px;}
+.photo-side-by-side{display:flex;gap:10px;flex-wrap:wrap;}
+.photo-side-by-side .single-photo{flex:1;min-width:150px;}
+#photo-edit-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:3000;align-items:center;justify-content:center;padding:16px;}
+#photo-edit-modal.open{display:flex;}
+.pe-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;}
+.pe-canvas-wrap{background:#000;border-radius:8px;overflow:hidden;margin:12px 0;display:flex;align-items:center;justify-content:center;position:relative;touch-action:none;}
+.pe-canvas-wrap canvas{max-width:100%;display:block;}
+.pe-crop-box{position:absolute;border:2px dashed #3b82f6;background:rgba(59,130,246,.15);cursor:move;}
+.pe-crop-handle{position:absolute;width:16px;height:16px;background:#3b82f6;border:2px solid #fff;border-radius:50%;right:-9px;bottom:-9px;cursor:nwse-resize;touch-action:none;}
+.pe-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+.pe-btn{flex:1;min-width:80px;padding:9px;border:1.5px solid var(--border);background:#12151f;color:var(--text);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;}
+.pe-btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+.pe-btn.danger{background:#7f1d1d;border-color:#7f1d1d;color:#fca5a5;}
 .add-btns{display:flex;gap:7px;margin-top:5px;}
 .btn-file{flex:1;padding:8px;background:#1e3a5f;color:#60a5fa;border:1.5px dashed #1e40af;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;text-align:center;}
 .btn-cam{flex:1;padding:8px;background:#0f2d1f;color:#4ade80;border:1.5px dashed #166534;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;text-align:center;}
@@ -105,6 +119,30 @@ input,button,select,textarea{font-family:inherit;}
 </div>
 </div>
 
+<div id="photo-edit-modal">
+<div class="pe-card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <h3 style="font-weight:800;font-size:14px">Editar Foto</h3>
+    <button onclick="closePhotoEdit()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:22px">&times;</button>
+  </div>
+  <div class="pe-canvas-wrap" id="pe-canvas-wrap">
+    <canvas id="pe-canvas"></canvas>
+    <div class="pe-crop-box" id="pe-crop-box" style="display:none">
+      <div class="pe-crop-handle" id="pe-crop-handle"></div>
+    </div>
+  </div>
+  <div class="pe-btns">
+    <button class="pe-btn" onclick="peRotate(-90)">&#8634; Girar -90&deg;</button>
+    <button class="pe-btn" onclick="peRotate(90)">&#8635; Girar +90&deg;</button>
+    <button class="pe-btn" onclick="peToggleCrop()" id="pe-crop-toggle">Cortar</button>
+  </div>
+  <div class="pe-btns">
+    <button class="pe-btn danger" onclick="closePhotoEdit()">Cancelar</button>
+    <button class="pe-btn primary" onclick="peConfirm()">Confirmar</button>
+  </div>
+</div>
+</div>
+
 <script>
 const ALC_LOGO_B64='data:image/png;base64,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';
 
@@ -127,6 +165,7 @@ let formData = {
 let extras = {
   imgEquip:null, fotoEquip:null,
   manometro:null, psv_lacre:null, psv_placa:null, art_comprov:null,
+  adesivo_manometro:null, adesivo_psv:null,
 };
 
 let artPages = [];
@@ -327,8 +366,11 @@ function renderDispositivos(){
   if(isMano){
     html+='<div style="background:#12151f;border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px">'
     +'<div style="font-size:13px;font-weight:800;margin-bottom:12px">Manometro</div>'
+    +'<div class="photo-side-by-side">'
     +renderSinglePhoto('manometro','Foto do Manometro Calibrado')
-    +renderMultiPageUploader('manometro','Certificado de Calibracao do Manometro')
+    +renderSinglePhoto('adesivo_manometro','Foto do Adesivo de Calibracao (legivel)')
+    +'</div>'
+    +renderMultiPageUploader('manometro','Certificado de Calibracao do Manometro (pagina separada no documento)')
     +'</div>';
   }
   if(isPsv){
@@ -338,9 +380,12 @@ function renderDispositivos(){
     +fld('Pressao de Abertura (Bar)','psv_pressao_bar','half')
     +fld('Pressao de Abertura (Kgf/cm2)','psv_pressao_kgf','half')
     +'</div>'
+    +'<div class="photo-side-by-side">'
     +renderSinglePhoto('psv_lacre','Foto do Lacre da Valvula de Seguranca')
-    +renderSinglePhoto('psv_placa','Foto da Placa da Valvula de Seguranca')
-    +renderMultiPageUploader('psv','Certificado de Calibracao da Valvula de Seguranca')
+    +renderSinglePhoto('adesivo_psv','Foto do Adesivo de Calibracao (legivel)')
+    +'</div>'
+    +renderSinglePhoto('psv_placa','Foto da Placa da Valvula de Seguranca (opcional)')
+    +renderMultiPageUploader('psv','Certificado de Calibracao da Valvula de Seguranca (pagina separada no documento)')
     +'</div>';
   }
   return html;
@@ -485,7 +530,7 @@ function renderGerar(){
 function renderSinglePhoto(key,label){
   var e=extras[key];
   var inner=e&&e.dataUrl
-    ?'<div class="sp-preview"><img src="'+e.dataUrl+'" alt="'+label+'"/><button class="sp-del" onclick="clearExtra(\''+key+'\')">x</button></div>'
+    ?'<div class="sp-preview"><img src="'+e.dataUrl+'" alt="'+label+'"/><button class="sp-edit" onclick="openPhotoEditExtra(\''+key+'\')" title="Rotacionar/Cortar">&#9998;</button><button class="sp-del" onclick="clearExtra(\''+key+'\')">x</button></div>'
     :'<div class="sp-empty">Sem foto</div>';
   return '<div class="single-photo"><div class="sp-title">'+label+'</div>'+inner
     +'<div class="add-btns">'
@@ -500,6 +545,154 @@ async function handleExtra(key,file){
   renderContent();
 }
 function clearExtra(key){extras[key]=null;renderContent();}
+
+// ======= EDITOR DE FOTO (rotacionar / cortar) =======
+var peTarget=null;
+var peRotation=0;
+var peCropMode=false;
+var peCropRect=null;
+var peImg=null;
+
+function openPhotoEditExtra(key){
+  if(!extras[key])return;
+  peTarget=key;
+  peStartEdit(extras[key].dataUrl);
+}
+function peStartEdit(dataUrl){
+  peRotation=0;peCropMode=false;peCropRect=null;
+  var cropBox=document.getElementById('pe-crop-box');
+  if(cropBox)cropBox.style.display='none';
+  var toggle=document.getElementById('pe-crop-toggle');
+  if(toggle)toggle.textContent='Cortar';
+  peImg=new Image();
+  peImg.onload=function(){
+    peDrawCanvas();
+    document.getElementById('photo-edit-modal').classList.add('open');
+  };
+  peImg.src=dataUrl;
+}
+function peDrawCanvas(){
+  var canvas=document.getElementById('pe-canvas');
+  var ctx=canvas.getContext('2d');
+  var rad=(peRotation%360)*Math.PI/180;
+  var sw=peImg.width, sh=peImg.height;
+  var swapped=Math.abs(peRotation%180)===90;
+  var cw=swapped?sh:sw, ch=swapped?sw:sh;
+  var maxW=440;
+  var scale=cw>maxW?maxW/cw:1;
+  canvas.width=cw*scale;canvas.height=ch*scale;
+  ctx.save();
+  ctx.translate(canvas.width/2,canvas.height/2);
+  ctx.rotate(rad);
+  ctx.scale(scale,scale);
+  ctx.drawImage(peImg,-sw/2,-sh/2,sw,sh);
+  ctx.restore();
+}
+function peRotate(delta){
+  peRotation=(peRotation+delta+360)%360;
+  peCropMode=false;peCropRect=null;
+  var cropBox=document.getElementById('pe-crop-box');
+  if(cropBox)cropBox.style.display='none';
+  var toggle=document.getElementById('pe-crop-toggle');
+  if(toggle)toggle.textContent='Cortar';
+  peDrawCanvas();
+}
+function peToggleCrop(){
+  peCropMode=!peCropMode;
+  var canvas=document.getElementById('pe-canvas');
+  var cropBox=document.getElementById('pe-crop-box');
+  var toggle=document.getElementById('pe-crop-toggle');
+  if(peCropMode){
+    toggle.textContent='Aplicar Corte';
+    var w=canvas.width*0.7, h=canvas.height*0.7;
+    var x=(canvas.width-w)/2, y=(canvas.height-h)/2;
+    peCropRect={x:x,y:y,w:w,h:h};
+    peRenderCropBox();
+    cropBox.style.display='block';
+    peEnableCropDrag();
+  } else {
+    if(peCropRect){
+      var ctx=canvas.getContext('2d');
+      var x=peCropRect.x,y=peCropRect.y,w=peCropRect.w,h=peCropRect.h;
+      var imgData=ctx.getImageData(x,y,w,h);
+      canvas.width=w;canvas.height=h;
+      ctx.putImageData(imgData,0,0);
+    }
+    cropBox.style.display='none';
+    toggle.textContent='Cortar';
+    peCropRect=null;
+  }
+}
+function peRenderCropBox(){
+  var cropBox=document.getElementById('pe-crop-box');
+  var canvas=document.getElementById('pe-canvas');
+  var wrap=document.getElementById('pe-canvas-wrap');
+  var canvasRect=canvas.getBoundingClientRect();
+  var wrapRect=wrap.getBoundingClientRect();
+  var offX=canvasRect.left-wrapRect.left, offY=canvasRect.top-wrapRect.top;
+  cropBox.style.left=(offX+peCropRect.x)+'px';
+  cropBox.style.top=(offY+peCropRect.y)+'px';
+  cropBox.style.width=peCropRect.w+'px';
+  cropBox.style.height=peCropRect.h+'px';
+}
+function peEnableCropDrag(){
+  var cropBox=document.getElementById('pe-crop-box');
+  var handle=document.getElementById('pe-crop-handle');
+  var dragging=false,resizing=false,startX=0,startY=0,startRect=null;
+  var MIN=24;
+  var onDown=function(e){
+    dragging=true;
+    var pt=e.touches?e.touches[0]:e;
+    startX=pt.clientX;startY=pt.clientY;
+    startRect=Object.assign({},peCropRect);
+    e.preventDefault();e.stopPropagation();
+  };
+  var onResizeDown=function(e){
+    resizing=true;
+    var pt=e.touches?e.touches[0]:e;
+    startX=pt.clientX;startY=pt.clientY;
+    startRect=Object.assign({},peCropRect);
+    e.preventDefault();e.stopPropagation();
+  };
+  var onMove=function(e){
+    var canvas=document.getElementById('pe-canvas');
+    if(dragging){
+      var pt=e.touches?e.touches[0]:e;
+      var dx=pt.clientX-startX, dy=pt.clientY-startY;
+      peCropRect.x=Math.max(0,Math.min(canvas.width-peCropRect.w,startRect.x+dx));
+      peCropRect.y=Math.max(0,Math.min(canvas.height-peCropRect.h,startRect.y+dy));
+      peRenderCropBox();
+    } else if(resizing){
+      var pt2=e.touches?e.touches[0]:e;
+      var dx2=pt2.clientX-startX, dy2=pt2.clientY-startY;
+      var maxW=canvas.width-startRect.x, maxH=canvas.height-startRect.y;
+      peCropRect.w=Math.max(MIN,Math.min(maxW,startRect.w+dx2));
+      peCropRect.h=Math.max(MIN,Math.min(maxH,startRect.h+dy2));
+      peRenderCropBox();
+    }
+  };
+  var onUp=function(){dragging=false;resizing=false;};
+  cropBox.onmousedown=onDown;cropBox.ontouchstart=onDown;
+  if(handle){handle.onmousedown=onResizeDown;handle.ontouchstart=onResizeDown;}
+  document.onmousemove=onMove;document.ontouchmove=onMove;
+  document.onmouseup=onUp;document.ontouchend=onUp;
+}
+function peConfirm(){
+  if(peCropMode)peToggleCrop();
+  var canvas=document.getElementById('pe-canvas');
+  var dataUrl=canvas.toDataURL('image/jpeg',0.9);
+  if(peTarget&&extras[peTarget]){
+    extras[peTarget].dataUrl=dataUrl;
+  }
+  closePhotoEdit();
+  renderContent();
+}
+function closePhotoEdit(){
+  document.getElementById('photo-edit-modal').classList.remove('open');
+  document.onmousemove=null;document.ontouchmove=null;
+  document.onmouseup=null;document.ontouchend=null;
+  peTarget=null;peImg=null;
+}
 
 // ======= MULTI-PAGE UPLOADER =======
 function renderMultiPageUploader(key,title){
@@ -620,40 +813,37 @@ var PAGE_STYLE=''
 
 function HDR(d){
   return '<div class="hdr">'
-    +'<table style="width:100%;border-collapse:collapse;margin-bottom:0;border:2px solid #212F62">'
+    +'<table style="width:100%;border-collapse:collapse">'
     +'<tr>'
-    +'<td style="width:90px;padding:3px 6px;vertical-align:middle;text-align:center;border-right:2px solid #212F62;background:#f8faff">'
-    +'<img src="'+ALC_LOGO_B64+'" style="width:72px;height:auto;display:block;margin:0 auto"/>'
+    +'<td style="width:110px;padding:0 14px 0 0;vertical-align:top">'
+    +'<img src="'+ALC_LOGO_B64+'" style="width:95px;height:auto;display:block"/>'
     +'</td>'
-    +'<td style="padding:4px 12px;vertical-align:middle;text-align:center">'
-    +'<div style="font-size:9pt;font-weight:900;color:#212F62;line-height:1.2">LAUDO DE CALIBRACAO DE DISPOSITIVOS DE SEGURANCA</div>'
-    +'<div style="font-size:7.5pt;font-weight:700;color:#212F62;margin-top:2px">VP '+(d.vp_numero||'01')+' - '+(d.num_relatorio||'')+(d.cliente_nome?' - '+d.cliente_nome:'')+'</div>'
-    +'<div style="background:#212F62;height:2px;margin:3px 0 1px"></div>'
-    +'<div style="background:#C81F25;height:1.5px"></div>'
+    +'<td style="vertical-align:middle">'
+    +'<div style="height:6px;background:#212F62;margin-bottom:2px"></div>'
+    +'<div style="height:6px;background:#C81F25;margin-bottom:2px"></div>'
+    +'<div style="height:6px;background:#212F62"></div>'
     +'</td>'
     +'</tr>'
     +'</table>'
     +'</div>';
 }
-function secao4(d){
-  return '<table>'
-    +'<tr><th colspan="4" class="th-s">4. DADOS DO CLIENTE</th></tr>'
-    +'<tr><td class="lbl">CLIENTE:</td><td class="val" colspan="3">'+(d.cliente||d.cliente_nome||'')+'</td></tr>'
-    +'<tr><td class="lbl">ENDERECO:</td><td class="val" colspan="3">'+(d.cliente_end||'')+'</td></tr>'
-    +'<tr><td class="lbl">CIDADE:</td><td class="val" colspan="3">'+(d.cliente_cidade||'')+'</td></tr>'
-    +'<tr><td class="lbl">CNPJ:</td><td class="val">'+(d.cliente_cnpj||'')+'</td>'
-    +'<td class="lbl">VP No:</td><td class="val">VP - '+(d.vp_numero||'01')+'</td></tr>'
-    +'<tr><td class="lbl">IDENTIFICACAO:</td><td class="val" colspan="3">'+(d.identificacao||'')+'</td></tr>'
-    +'<tr><td class="lbl">TAG:</td><td class="val">'+(d.tag||'')+'</td>'
-    +'<td class="lbl">LOCAL:</td><td class="val">'+(d.local||'')+'</td></tr>'
-    +'<tr><td class="lbl">DATA DA CALIBRACAO:</td><td class="val">'+(d.data_calibracao||'')+'</td>'
-    +'<td class="lbl">PROXIMA CALIBRACAO:</td><td class="val">'+(d.prox_calibracao||'')+'</td></tr>'
-    +'</table>';
+function FOOTER(){
+  return '<div style="margin-top:22px">'
+    +'<div style="height:4px;background:#212F62;margin-bottom:1px"></div>'
+    +'<div style="height:4px;background:#C81F25;margin-bottom:1px"></div>'
+    +'<div style="height:4px;background:#212F62;margin-bottom:4px"></div>'
+    +'<div style="text-align:center;font-size:7.5pt;font-weight:700;color:#212F62;line-height:1.5">'
+    +'ENGENHEIRO RESPONSÁVEL: THIAGO DA SILVA SANTOS<br/>'
+    +'ENGENHEIRO MECÂNICO &ndash; CREA-MG: 1420455354<br/>'
+    +'RUA EE, 35 &ndash; ARVOREDO &ndash; CONTAGEM/MG<br/>'
+    +'TEL: (31) 3485-7222 &ndash; (31) 9 9350-3718<br/>'
+    +'alc.compressores@hotmail.com'
+    +'</div></div>';
 }
 function assinaturaHTML(){
   return '<div class="assinatura-wrap"><div class="assinatura">'
     +'<p style="margin:0;font-size:11pt;font-weight:700">Thiago da Silva Santos</p>'
-    +'<p style="margin:0;font-size:10pt">Engenheiro Mecanico</p>'
+    +'<p style="margin:0;font-size:10pt">Engenheiro Mecânico</p>'
     +'<p style="margin:0;font-size:10pt">CREA-MG: 1420455354</p>'
     +'</div></div>';
 }
@@ -677,49 +867,60 @@ function buildDocManometro(){
   var d=formData;
   var vp=d.vp_numero||'01';
   var manoFoto=extras.manometro&&extras.manometro.dataUrl
-    ?'<div class="foto-box"><img src="'+extras.manometro.dataUrl+'"/><div class="foto-label">Manometro Calibrado</div></div>'
-    :'<div class="foto-box" style="color:#999;padding:20px">[ Foto do Manometro Calibrado ]</div>';
-  var mainPage='<div class="pg">'+HDR(d)+secao4(d)
-    +'<h1>LAUDO DE CALIBRACAO DE MANOMETRO - VP '+vp+'</h1>'
-    +'<p class="body-text">EM '+(d.data_calibracao||'___/___/______')+', REALIZOU-SE CALIBRACAO DE MANOMETRO DE PRESSAO COM CERTIFICADO DE CALIBRACAO DE ACORDO COM AS PRESSOES ESTIPULADAS NO LIVRO DE INSPECAO DO VASO DE PRESSAO VP - '+vp+'.</p>'
-    +'<p class="prox">Proxima inspecao</p>'
-    +'<p class="prox-val">'+(d.prox_calibracao||'___/___/______')+' OU AO REALIZAR NOVA INSPECAO NO VASO DE PRESSAO.</p>'
-    +manoFoto+assinaturaHTML()
+    ?'<div class="foto-box"><img src="'+extras.manometro.dataUrl+'"/><div class="foto-label">Manômetro calibrado</div></div>'
+    :'<div class="foto-box" style="color:#999;padding:20px">[ Foto do Manômetro Calibrado ]</div>';
+  var adesivoFoto=extras.adesivo_manometro&&extras.adesivo_manometro.dataUrl
+    ?'<div class="foto-box"><img src="'+extras.adesivo_manometro.dataUrl+'"/><div class="foto-label">Adesivo de calibração</div></div>'
+    :'<div class="foto-box" style="color:#999;padding:20px">[ Adesivo de Calibração ]</div>';
+  var mainPage='<div class="pg">'+HDR(d)
+    +'<h1>LAUDO DE CALIBRAÇÃO DE MANÔMETRO &ndash; VP '+vp+'</h1>'
+    +'<p class="body-text">EM '+(d.data_calibracao||'___/___/______')+', REALIZOU-SE CALIBRAÇÃO DE MANÔMETRO DE PRESSÃO COM CERTIFICADO DE CALIBRAÇÃO DE ACORDO COM AS PRESSÕES ESTIPULADAS NO LIVRO DE INSPEÇÃO DO VASO DE PRESSÃO VP &ndash; '+vp+'.</p>'
+    +'<p class="prox">Próxima inspeção</p>'
+    +'<p class="prox-val">'+(d.prox_calibracao||'___/___/______')+' OU AO REALIZAR NOVA INSPEÇÃO NO VASO DE PRESSÃO.</p>'
+    +'<div class="foto-grid">'+manoFoto+adesivoFoto+'</div>'
+    +assinaturaHTML()
+    +FOOTER()
     +'</div>';
   var certHTML=calibPages.manometro.map(function(p,i){
-    return '<div class="pg">'+HDR(d)+(i===0?'<h2>CERTIFICADO DE CALIBRACAO MANOMETRO</h2>':'')
-      +'<div class="cert-img"><img src="'+p.dataUrl+'"/></div></div>';
+    return '<div class="pg">'+HDR(d)+(i===0?'<h2>CERTIFICADO DE CALIBRAÇÃO MANÔMETRO</h2>':'')
+      +'<div class="cert-img"><img src="'+p.dataUrl+'"/></div>'
+      +(i===calibPages.manometro.length-1?FOOTER():'')
+      +'</div>';
   }).join('');
   return '<html xmlns:o=\'urn:schemas-microsoft-com:office:office\' xmlns:w=\'urn:schemas-microsoft-com:office:word\'>'
     +'<head><meta charset="UTF-8"/><style>'+PAGE_STYLE+'</style></head>'
-    +'<body>'+artPagesHTML(d)+comprovHTML(d)+mainPage+certHTML+'</body></html>';
+    +'<body>'+mainPage+certHTML+'</body></html>';
 }
 
 function buildDocPSV(){
   var d=formData;
   var vp=d.vp_numero||'01';
-  var lacreFoto=extras.psv_lacre&&extras.psv_lacre.dataUrl
-    ?'<div class="foto-box"><img src="'+extras.psv_lacre.dataUrl+'"/><div class="foto-label">Lacre Valvula de Seguranca</div></div>':'';
-  var placaFoto=extras.psv_placa&&extras.psv_placa.dataUrl
-    ?'<div class="foto-box"><img src="'+extras.psv_placa.dataUrl+'"/><div class="foto-label">Placa Valvula de Seguranca</div></div>':'';
-  var fotosHTML=(lacreFoto||placaFoto)
-    ?'<div class="foto-grid">'+lacreFoto+placaFoto+'</div>'
-    :'<div class="foto-box" style="color:#999;padding:20px">[ Fotos da Valvula de Seguranca ]</div>';
-  var mainPage='<div class="pg">'+HDR(d)+secao4(d)
-    +'<h1>LAUDO DE CALIBRACAO DE VALVULA DE SEGURANCA - VP '+vp+'</h1>'
-    +'<p class="body-text">EM '+(d.data_calibracao||'___/___/______')+', REALIZOU-SE CALIBRACAO DE VALVULA DE SEGURANCA COM CERTIFICADO DE CALIBRACAO DE ACORDO COM AS PRESSOES ESTIPULADAS NO LIVRO DE INSPECAO DO VASO DE PRESSAO VP - '+vp+'.</p>'
-    +'<p style="font-size:11pt;font-weight:700;text-align:center;margin:12px 0;color:#212F62">PRESSAO DE ABERTURA: '+(d.psv_pressao_bar||'---')+' Bar / '+(d.psv_pressao_kgf||'---')+' Kgf/cm2</p>'
-    +'<p class="prox">Proxima inspecao interna</p>'
-    +'<p class="prox-val">'+(d.prox_calibracao||'___/___/______')+' OU AO REALIZAR NOVA INSPECAO NO VASO DE PRESSAO.</p>'
-    +fotosHTML+assinaturaHTML()
+  var valvulaFotoSrc=(extras.psv_lacre&&extras.psv_lacre.dataUrl)?extras.psv_lacre.dataUrl:(extras.psv_placa&&extras.psv_placa.dataUrl?extras.psv_placa.dataUrl:'');
+  var valvulaFoto=valvulaFotoSrc
+    ?'<div class="foto-box"><img src="'+valvulaFotoSrc+'"/><div class="foto-label">Válvula de segurança calibrada</div></div>'
+    :'<div class="foto-box" style="color:#999;padding:20px">[ Foto da Válvula de Segurança ]</div>';
+  var adesivoFoto=extras.adesivo_psv&&extras.adesivo_psv.dataUrl
+    ?'<div class="foto-box"><img src="'+extras.adesivo_psv.dataUrl+'"/><div class="foto-label">Adesivo de calibração</div></div>'
+    :'<div class="foto-box" style="color:#999;padding:20px">[ Adesivo de Calibração ]</div>';
+  var mainPage='<div class="pg">'+HDR(d)
+    +'<h1>LAUDO DE CALIBRAÇÃO DE VÁLVULA DE SEGURANÇA &ndash; VP '+vp+'</h1>'
+    +'<p class="body-text">EM '+(d.data_calibracao||'___/___/______')+', REALIZOU-SE CALIBRAÇÃO DE VÁLVULA DE SEGURANÇA COM CERTIFICADO DE CALIBRAÇÃO DE ACORDO COM AS PRESSÕES ESTIPULADAS NO LIVRO DE INSPEÇÃO DO VASO DE PRESSÃO VP &ndash; '+vp+'.</p>'
+    +'<p style="font-size:16pt;font-weight:900;text-align:center;margin:14px 0;color:#FF0000">PRESSÃO DE ABERTURA: '+(d.psv_pressao_bar||'---')+' Bar / '+(d.psv_pressao_kgf||'---')+' Kgf/cm&sup2;</p>'
+    +'<p class="prox">Próxima inspeção</p>'
+    +'<p class="prox-val">'+(d.prox_calibracao||'___/___/______')+' OU AO REALIZAR NOVA INSPEÇÃO NO VASO DE PRESSÃO.</p>'
+    +'<div class="foto-grid">'+valvulaFoto+adesivoFoto+'</div>'
+    +assinaturaHTML()
+    +FOOTER()
     +'</div>';
   var certHTML=calibPages.psv.map(function(p,i){
-    return '<div class="pg">'+HDR(d)+(i===0?'<h2>CERTIFICADO DE CALIBRACAO VALVULA DE SEGURANCA</h2>':'')
-      +'<div class="cert-img"><img src="'+p.dataUrl+'"/></div></div>';
+    return '<div class="pg">'+HDR(d)+(i===0?'<h2>CERTIFICADO DE CALIBRAÇÃO VÁLVULA DE SEGURANÇA</h2>':'')
+      +'<div class="cert-img"><img src="'+p.dataUrl+'"/></div>'
+      +(i===calibPages.psv.length-1?FOOTER():'')
+      +'</div>';
   }).join('');
   return '<html xmlns:o=\'urn:schemas-microsoft-com:office:office\' xmlns:w=\'urn:schemas-microsoft-com:office:word\'>'
     +'<head><meta charset="UTF-8"/><style>'+PAGE_STYLE+'</style></head>'
-    +'<body>'+artPagesHTML(d)+comprovHTML(d)+mainPage+certHTML+'</body></html>';
+    +'<body>'+mainPage+certHTML+'</body></html>';
 }
 
 // ======= GENERATE =======
